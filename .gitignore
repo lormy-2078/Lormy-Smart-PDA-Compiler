@@ -8,8 +8,8 @@ __pycache__/
 .tr2/
 data/*.bak.json
 
-# Deliberately out of the published repository
-# The Netlify build copy — a duplicate of the app and the tariff data.
+# The Netlify build copy — deleted 2026-09-04; if it comes back it is a build
+# artefact, not source.
 netlify_deploy/
 # Claude Code's per-machine settings: it embeds absolute local paths.
 .claude/settings.local.json
