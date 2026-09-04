@@ -618,8 +618,14 @@ body.x-exporting .doc{transform:none!important}
 .itab .kv{display:grid;grid-template-columns:48px minmax(0,1fr) 42px minmax(0,1fr);
  column-gap:6px;align-items:baseline}
 .itab .kv2{display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:6px;align-items:baseline}
+/* Final-account rows carry longer labels ("Date rcvd deposit") — their own
+   wider template keeps the same snug colon. */
+.itab .kv3{display:grid;grid-template-columns:118px minmax(0,1fr);column-gap:6px;align-items:baseline}
 .itab .kv .w3{grid-column:2/5}
-.itab .kv>b,.itab .kv2>b{white-space:nowrap}
+/* Labels right-align inside their column so the colon sits against the value
+   whatever the label's length — the old left-aligned labels left a ragged gap
+   after short ones (To:, Attn:) that read as a mistake. */
+.itab .kv>b,.itab .kv2>b,.itab .kv3>b{white-space:nowrap;text-align:right}
 .itab b{color:var(--brandInk)}
 .doc h4{font-size:var(--f2);color:var(--brandInk);margin:14px 0 4px}
 .doc table{border-color:var(--paperLine)}
@@ -1662,7 +1668,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.0 · 04 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.1 · 04 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73783,7 +73789,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.3.0';
+const VER='2.3.1';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -82006,8 +82012,8 @@ function paintDocs(){
  const enqDoc=j.reqType!=='Appointment';
  const tbn=(v,ph)=>{const s=String(v==null?'':v).trim();
   return s?esc(s):(enqDoc?(ph||'TBN'):'');};
- const hrow=(l1,c1,l2,c2)=>'<tr><td>'+(l1?('<b>'+l1+':</b> '+c1):'')+'</td>'
-   +'<td>'+(l2?('<b>'+l2+':</b> '+c2):'')+'</td></tr>';
+ const hrow=(l1,c1,l2,c2)=>'<tr><td>'+(l1?('<span class="kv3"><b>'+l1+':</b> <span class="v">'+c1+'</span></span>'):'')+'</td>'
+   +'<td>'+(l2?('<span class="kv3"><b>'+l2+':</b> <span class="v">'+c2+'</span></span>'):'')+'</td></tr>';
  const head=(to,attn,ref,cargo,qty,blNo,dk)=>
   '<div class="doc-h"><div><div class="doc-co">'+esc(j.agency||'—')+'</div><div class="sm">'+esc(j.agencyAddr)+'</div></div>'
   +'<div class="doc-t"><b>'+(fdaOn()?'FINAL DISBURSEMENT ACCOUNT':'PROVISIONAL DISBURSEMENT ACCOUNT')+'</b>'
@@ -82015,16 +82021,17 @@ function paintDocs(){
   +'<div class="sm">Date: '+esc(today)+'</div></div></div>'
   +'<table class="itab">'+(blNo?'<tr><td colspan="2"><b>B/L no.:</b> '+esc(blNo)+'</td></tr>':'')
   +'<tr><td><span class="kv2"><b>To:</b> '+dcell('docTo',dk,(j.docTo&&j.docTo[dk])||to,'Addressee')+'</span>'
-    +'</td><td><span class="kv"><b>Vessel:</b><span class="w3">'+hcell('vessel',String(j.vessel||'').trim(),'TBN')+'</span></span></td></tr>'
+    +'</td><td><span class="kv"><b>Vessel:</b> '+hcell('vessel',String(j.vessel||'').trim(),'TBN')
+    +'<b>Flag:</b> '+hcell('flag',j.flag,'TBN')+'</span></td></tr>'
   +'<tr><td><span class="kv2"><b>Attn:</b> '+dcell('docAttn',dk,(j.docAttn&&j.docAttn[dk])||attn,'Contact')+'</span>'
     +'</td><td><span class="kv"><b>IMO:</b> '+hcell('imo',j.imo,'TBN')
-    +'<b>Flag:</b> '+hcell('flag',j.flag,'TBN')+'</span></td></tr>'
-  +'<tr><td><span class="kv2"><b>Cargo:</b> '+hcell('cargoTxt',cargo)+'</span></td><td><span class="kv"><b>Type:</b> '+hcell('vtype',j.vtype)
     +'<b>GRT:</b> '+hcell('grt',j.grt)+'</span></td></tr>'
-  +'<tr><td><span class="kv2"><b>Prov. cargo qty:</b> '+hcell('qtyTxt',qty)+'</span></td><td><span class="kv"><b>LOA:</b> <span class="v">'+hcell('loa',j.loa)+' m</span>'
+  +'<tr><td><span class="kv2"><b>Cargo:</b> '+hcell('cargoTxt',cargo)+'</span>'
+    +'</td><td><span class="kv"><b>LOA:</b> <span class="v">'+hcell('loa',j.loa)+' m</span>'
     +'<b>Draft:</b> <span class="v">'+hcell('draft',j.draft,'TBN')+(num(j.draft)>0?' m':'')+'</span></span></td></tr>'
-  +'<tr><td><span class="kv2"><b>Prov. port stay:</b> <span class="v">'+hcell('stay',j.stay||'0')+' days</span></span></td>'
-    +'<td><span class="kv"><b>ETA:</b><span class="w3">'+hcell('eta',j.eta,'TBA')+'</span></span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Prov. cargo qty:</b> '+hcell('qtyTxt',qty)+'</span>'
+    +'</td><td><span class="kv"><b>ETA:</b><span class="w3">'+hcell('eta',j.eta,'TBA')+'</span></span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Prov. port stay:</b> <span class="v">'+hcell('stay',j.stay||'0')+' days</span></span></td><td></td></tr>'
   /* Liner terms are an internal routing decision — they settle which document each
      cargo charge lands on. The party reading the PDA does not need them on its
      face, and printing them invites a conversation about terms on a document that
