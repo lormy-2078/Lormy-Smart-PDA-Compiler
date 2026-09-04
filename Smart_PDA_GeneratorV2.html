@@ -22,7 +22,12 @@
      of silently failing, and everything else in the app is untouched. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- html2canvas-PRO, not plain html2canvas: the original cannot parse the
+     computed serialization of modern color functions (color-mix(), oklch())
+     that current browsers emit — the document's own zebra stripe is a
+     color-mix — and threw instead of painting. The pro fork is a drop-in
+     (same window.html2canvas global) that understands them. -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
    TOKENS — the single source of every colour in this file.
@@ -15281,10 +15286,14 @@ async function exportPdf(){
     cv=await html2canvas(docEl,{
      scale:2,backgroundColor:'#ffffff',logging:false,
      onclone:d=>{
-      const st=d.createElement('style');
-      st.textContent='.no-p{display:none!important}.pda{display:block!important}';
-      d.head.appendChild(st);
-     }});
+     const st=d.createElement('style');
+     st.textContent='.no-p{display:none!important}.pda{display:block!important}'
+      /* Belt and braces: hand the rasterizer literal colors for the one
+         color-mix inside the document, and drop effects it cannot paint. */
+      +'.doc tbody tr:nth-child(even)>td{background:#f6f8fa!important}'
+      +'.doc *{backdrop-filter:none!important;box-shadow:none!important}';
+     d.head.appendChild(st);
+    }});
    }finally{
     document.body.classList.toggle('fitting',saved.fit);
     if(saved.ps)docEl.style.setProperty('--pdaScale',saved.ps);
