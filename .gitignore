@@ -1,0 +1,20 @@
+.env
+data/pda_platform.db
+storage/documents/
+storage/outputs/
+__pycache__/
+*.pyc
+.tariff_render/
+.tr2/
+data/*.bak.json
+
+# Deliberately out of the published repository
+# The Netlify build copy — a duplicate of the app and the tariff data.
+netlify_deploy/
+# Claude Code's per-machine settings: it embeds absolute local paths.
+.claude/settings.local.json
+# GPHA's published tariff, 32.5 MB. It is their copyrighted document, not this
+# project's to redistribute. The app's Source PDF viewer expects it beside
+# Smart_PDA_GeneratorV2.html — put your own copy there. Every rate and condition
+# the engine uses is already digitised in data/gpha_tariff*.json.
+GPHA_PORT_TARIFF_AUG_2023.pdf

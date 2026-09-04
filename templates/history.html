@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}History &mdash; Pro Forma Disbursement Account Platform{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Vessel Calls</h1>
+  <p class="muted">Every call generated on this platform, with its billing decision and audit trail. This is Module H (Audit, Reporting, Admin) from the Implementation Plan, in miniature.</p>
+  {% if calls %}
+  <table>
+    <tr><th>Our Ref</th><th>Vessel</th><th>Cargo</th><th>Port</th><th>Billing Decision</th><th>Status</th><th>Created</th><th></th></tr>
+    {% for c in calls %}
+    <tr>
+      <td>{{ c.our_ref or '-' }}</td>
+      <td>{{ c.vessel or '-' }}</td>
+      <td>{{ c.cargo_type }}</td>
+      <td>{{ c.port }}</td>
+      <td>{% if c.billing_decision == 'PDA1_ONLY' %}<span class="badge pda1only">PDA 1 only</span>{% elif c.billing_decision %}<span class="badge split">PDA 1 + PDA 2</span>{% else %}<span class="muted">not run</span>{% endif %}</td>
+      <td>{{ c.status }}</td>
+      <td>{{ c.created_at }}</td>
+      <td><a href="/calls/{{ c.call_id }}">Open &rarr;</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No calls yet. <a href="/calls/new">Create the first one</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

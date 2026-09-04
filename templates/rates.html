@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Rate Library{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Rate Library</h1>
+  <p class="muted">Module E (Rate Engine, admin interface). Every charge incurred on a typical Import/Discharge
+    Bulk Cargo call at Takoradi (Free Out / FIOS / FIOST terms) &mdash; grouped exactly as they appear on the
+    two PDAs: Principal (Ship/Vessel Related Expenses + Others General) and Receiver (Cargo Related Expenses
+    + Others General). Rates are cross-checked against the official GPHA/GMA/GSA tariffs &mdash; see each
+    row's Source. Where a charge varies by cargo (e.g. Clinker vs. other Bulk Cargo), each cargo's rate is
+    its own row, right next to the others, so you can see the full spread for that charge at a glance. Rows
+    marked <span class="placeholder">PLACEHOLDER</span> aren't GPHA/GMA/GSA charges, need a driver not yet
+    collected, or are deliberately unpriced (e.g. an export-only cargo under an import charge) &mdash; edit
+    the amount and click Save once you have a real figure.</p>
+  <form method="get" action="/rates">
+    <label>Show charges for cargo</label>
+    <select name="cargo" onchange="this.form.submit()">
+      <option value="" {% if not cargo_filter %}selected{% endif %}>-- All Cargoes (unfiltered) --</option>
+      {% for t in cargo_types %}
+      <option value="{{ t }}" {% if cargo_filter == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+    <p class="muted">Filters to exactly the charges a real call for that cargo would price &mdash; every GT
+      band and every Principal/Receiver liner-terms variant of a charge still shows (those aren't cargo-specific),
+      only the cargo dimension narrows down. GT-band/vessel-size and liner-terms rows are unaffected since
+      they depend on the vessel and terms, not the cargo.</p>
+  </form>
+</div>
+
+{% for section in sections %}
+{% if section.divider_before %}
+<div class="rate-divider"><span>Receiver PDA</span></div>
+{% endif %}
+<div class="card">
+  <h2>{{ section.heading }}</h2>
+  <table>
+    <tr><th>Code</th><th>Description</th><th>Basis</th><th>Amount</th><th>Source</th><th></th><th></th></tr>
+    {% for r in section.rows %}
+    <tr>
+      <form method="post" action="/rates/{{ r.rate_id }}/update">
+      <input type="hidden" name="cargo_filter" value="{{ cargo_filter }}">
+      <td>{{ r.charge_code }}</td>
+      <td>{{ r.description }}</td>
+      <td>{{ r.unit_label }}</td>
+      <td><input name="amount" type="number" step="0.0001" value="{{ r.amount }}" style="width:100px"></td>
+      <td>{% if r.source and r.source.startswith('TBD') %}<span class="placeholder">{{ r.source }}</span>{% else %}<span class="muted">{{ r.source }}</span>{% endif %}</td>
+      <td>{% if r.tariff_ref_code %}<a href="/tariff?q={{ r.tariff_ref_code|urlencode }}">View source ({{ r.tariff_ref_code }})</a>{% endif %}</td>
+      <td><button type="submit">Save</button></td>
+      </form>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endfor %}
+{% endblock %}

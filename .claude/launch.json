@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pda-platform",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["app.py"],
+      "port": 5055
+    },
+    {
+      "name": "smart-pda-generator",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["serve.py", "5500"],
+      "port": 5500
+    }
+  ]
+}

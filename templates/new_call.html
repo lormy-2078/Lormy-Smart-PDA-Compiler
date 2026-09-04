@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}New Call &mdash; Pro Forma Disbursement Account Platform{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>New Vessel Call</h1>
+  <p class="muted">Module A (Call Setup) + Module C (Field Extraction). Upload a vessel-particulars spreadsheet to auto-fill what can be detected, or enter details manually. Fields marked <span class="badge low">low confidence</span> came from a guess or were not found &mdash; check them before generating a PDA.</p>
+  <form method="post" action="/calls/new/extract" enctype="multipart/form-data">
+    <label>Upload the appointment / nomination / enquiry &mdash; a saved <b>email</b> (.eml, .msg), a document (.pdf, .docx, .xls, .xlsx), or a photo/scan (.jpg, .png)</label>
+    <input type="file" name="file" accept=".eml,.msg,.pdf,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp">
+    <button type="submit">Extract fields from file</button>
+    {% if ai_enabled %}
+    <p class="muted">Using Claude (AI) for extraction &mdash; reads email bodies <i>and their attachments</i> together, plus scans/photos. Offline fallback for documents if the API call fails.</p>
+    {% else %}
+    <p class="muted">Using the offline heuristic extractor only (no ANTHROPIC_API_KEY set). Email files, scans and pasted text need Claude &mdash; see README for setup.</p>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  <form method="post" action="/calls/new">
+    <h2>Vessel &amp; Cargo Particulars</h2>
+    <div class="row">
+      <div><label>Vessel {{ badge('vessel') }}</label><input name="vessel" value="{{ prefill.vessel or '' }}"></div>
+      <div><label>IMO No. {{ badge('imo') }}</label><input name="imo" value="{{ prefill.imo or '' }}"></div>
+      <div><label>Flag {{ badge('flag') }}</label><input name="flag" value="{{ prefill.flag or '' }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Vessel Type {{ badge('vessel_type') }}</label><input name="vessel_type" value="{{ prefill.vessel_type or 'Bulk Carrier' }}"></div>
+      <div><label>GRT {{ badge('grt') }}</label><input name="grt" type="number" step="0.01" value="{{ prefill.grt or 0 }}"></div>
+      <div><label>LOA (m) {{ badge('loa') }}</label><input name="loa" type="number" step="0.01" value="{{ prefill.loa or 0 }}"></div>
+    </div>
+    <div class="row">
+      <div><label>Draft (m) {{ badge('draft') }}</label><input name="draft" type="number" step="0.01" value="{{ prefill.draft or 0 }}"></div>
+      <div><label>ETA {{ badge('eta') }}</label><input name="eta" value="{{ prefill.eta or '' }}" placeholder="dd-mmm-yyyy"></div>
+      <div>
+        <label>Port of Call</label>
+        <select name="port" id="port_of_call">
+          {% for p in ports %}
+          <option value="{{ p.name }}" {% if p.name == 'Takoradi' %}selected{% endif %} {% if not p.supported %}disabled{% endif %}>
+            {{ p.name }} ({{ p.unlocode }}){% if not p.supported %} &mdash; coming soon, not yet supported{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Cargo Type {{ badge('cargo') }}</label>
+        <select name="cargo_type" id="cargo_type" required>
+          <option value="" {% if not match_cargo_type(prefill.cargo) %}selected{% endif %}>-- Select Cargo Type (required) --</option>
+          {% for t in cargo_types %}
+          <option value="{{ t }}" {% if match_cargo_type(prefill.cargo) == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+        <p class="muted" id="cargo_type_note" style="display:none">Cargo type wasn't detected &mdash; please select it before creating the PDA.</p>
+      </div>
+      <div><label>Cargo Quantity (MT) {{ badge('cargo_qty_mt') }}</label><input name="cargo_qty_mt" id="cargo_qty_mt" type="number" step="0.01" value="{{ prefill.cargo_qty_mt or '' }}"></div>
+      <div>
+        <label>Provisional Port Stay (days) {{ badge('port_stay_days') }}</label>
+        <input name="port_stay_days" id="port_stay_days" type="number" step="0.5" min="0" value="{{ prefill.port_stay_days or '' }}">
+        <p class="muted" id="port_stay_note">Auto-calculated from cargo type &amp; quantity &mdash; edit the box if the receiver's discharge rate differs.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Is the vessel geared (has its own cranes)?</label>
+        <select name="vessel_geared" id="vessel_geared">
+          <option value="">-- Select --</option>
+          <option value="geared">Yes &mdash; vessel has its own cranes</option>
+          <option value="gearless">No &mdash; needs GPHA Mobile Harbour Crane</option>
+        </select>
+        <p class="muted" id="geared_note" style="display:none">
+          <span style="cursor:help; border-bottom:1px dotted #888"
+                title="A minimum Craneage Charge applies when cargo volume during a ship call is low and total Craneage income is less than the minimum specified per crane.">(?)</span>
+          A <b>$5,200 Min Crane Hire</b> is added &mdash; to the Principal under Liner Out, to the Receiver under Free Out.</p>
+      </div>
+    </div>
+
+    <details class="drivers" open>
+      <summary>References</summary>
+      <div class="drivers-body">
+        <p class="muted">Please review and complete the reference numbers, addresses, and person-in-charge for the Principal and (if applicable) the Receiver &mdash; these are the "To:" / "Att:" blocks on the printed PDA.</p>
+        <div class="row">
+          <div><label>Our Ref {{ badge('our_ref') }}</label><input name="our_ref" value="{{ prefill.our_ref or '' }}"></div>
+          <div><label>Your Ref {{ badge('your_ref') }}</label><input name="your_ref" value="{{ prefill.your_ref or '' }}"></div>
+        </div>
+        <div class="row">
+          <div><label>Principal (PDA 1 To:) {{ badge('principal') }}</label><textarea name="principal" rows="4" placeholder="Company name&#10;VAT/Reg No.&#10;Street&#10;Postal code, City&#10;Country">{{ prefill.principal or '' }}</textarea></div>
+          <div><label>Principal Attn {{ badge('principal_attn') }}</label><input name="principal_attn" value="{{ prefill.principal_attn or '' }}"></div>
+        </div>
+        <div class="row">
+          <div><label>Receiver (PDA 2 To:) {{ badge('receiver') }}</label><input name="receiver" value="{{ prefill.receiver or '' }}"></div>
+          <div><label>Receiver Attn {{ badge('receiver_attn') }}</label><input name="receiver_attn" value="{{ prefill.receiver_attn or '' }}"></div>
+        </div>
+      </div>
+    </details>
+
+    <h2>Select Loading / Discharging Liner Terms</h2>
+    <div class="row">
+      <div>
+        <label>Applicable Liner Terms {{ badge('liner_terms') }}</label>
+        <select name="liner_terms" id="liner_terms">
+          <option value="">-- Select Liner Terms --</option>
+          {% for lt in liner_terms_options %}
+          <option value="{{ lt }}" {% if prefill.liner_terms == lt %}selected{% endif %}>{{ lt }}</option>
+          {% endfor %}
+        </select>
+        <p class="muted">Determines the cost-sharing between Principal and Receiver. If left blank, it's inferred from the appointment text below.</p>
+      </div>
+    </div>
+    <label>Appointment / Nomination / Enquiry email &mdash; paste the full text here, then click <b>Extract</b> to auto-fill the whole form with AI</label>
+    <textarea name="appointment_text" id="appointment_text" rows="6" placeholder="Paste the appointment / nomination / enquiry email here (vessel, IMO, GRT/LOA, cargo & quantity, principal, receiver, refs, liner terms...) and click Extract below.">{{ prefill.appointment_text or '' }}</textarea>
+    {% if ai_enabled %}
+    <button type="submit" formaction="/calls/new/extract_text" formnovalidate>Extract details from this text for PDA generation</button>
+    <span class="muted" style="margin-left:8px">Reads the pasted text and fills vessel, cargo, parties, refs &amp; liner terms &mdash; review the badges before saving.</span>
+    {% else %}
+    <p class="muted">Set an ANTHROPIC_API_KEY to enable one-click AI extraction from pasted text (see README). The text is still used to infer the billing decision.</p>
+    {% endif %}
+
+    <details class="drivers">
+      <summary>Review and confirm Vessel's Marine Operations</summary>
+      <div class="drivers-body">
+        <p class="muted">The vessel's movements in / out of the berth &mdash; defaults to one movement each way (in + out). Adjust only if the vessel makes extra movements. Gangway watchmen are billed per Provisional Port Stay day automatically.</p>
+        <div class="row">
+          <div><label>Movements In</label><input name="movements_in" type="number" value="1"></div>
+          <div><label>Movements Out</label><input name="movements_out" type="number" value="1"></div>
+          <div><label>Movements In+Out</label><input name="movements_in_out" type="number" value="2"></div>
+        </div>
+      </div>
+    </details>
+
+    <input type="hidden" name="prefill_doc_id" value="{{ prefill_doc_id or '' }}">
+    <button type="submit">Create Pro Forma Disbursement</button>
+  </form>
+</div>
+
+<script>
+  // Takoradi discharge/load rates (tonnes/day) -- mirrors pda_engine/port_stay.py.
+  // Client-side only for instant feedback; the server recomputes authoritatively on submit.
+  var CARGO_STAY_RATES = {
+    "Bulk Clinker": 7000, "Bulk Gypsum": 7000, "Bulk Limestone": 7000, "Bulk Slag": 7000,
+    "Bulk Quicklime": 2300, "Bulk Bauxite": 18000, "Bulk Manganese": 35000,
+    "Bulk Wheat": 4000, "Bulk Cocoa": 5000, "Bagged Ammonium Nitrate": 1200
+  };
+
+  var cargoTypeEl = document.getElementById("cargo_type");
+  var cargoQtyEl = document.getElementById("cargo_qty_mt");
+  var linerTermsEl = document.getElementById("liner_terms");
+  var portStayEl = document.getElementById("port_stay_days");
+  var portStayNote = document.getElementById("port_stay_note");
+  var cargoTypeNote = document.getElementById("cargo_type_note");
+  var gearedEl = document.getElementById("vessel_geared");
+  var gearedNote = document.getElementById("geared_note");
+  var userEditedPortStay = false;   // once the user types in the box, stop auto-overwriting it
+
+  // Show the Craneage / Min-Crane-Hire hint only when the vessel is gearless ("No").
+  function toggleGearedNote() {
+    if (gearedNote) gearedNote.style.display = (gearedEl && gearedEl.value === "gearless") ? "block" : "none";
+  }
+  if (gearedEl) gearedEl.addEventListener("change", toggleGearedNote);
+  toggleGearedNote();
+
+  // Prompt when the cargo type couldn't be detected from the upload.
+  if (cargoTypeNote) cargoTypeNote.style.display = cargoTypeEl.value ? "none" : "block";
+  cargoTypeEl.addEventListener("change", function () {
+    if (cargoTypeNote) cargoTypeNote.style.display = cargoTypeEl.value ? "none" : "block";
+  });
+
+  // Dry-bulk import cargoes default to Free Out (receiver pays cargo handling).
+  // Mirrors rules_engine.default_liner_terms_for_cargo -- applied silently, only
+  // when the operator hasn't already chosen a term; they can still change it.
+  var FREE_OUT_CARGO_KEYWORDS = ["clinker", "gypsum", "limestone", "slag", "coal", "grain", "wheat"];
+  function applyDefaultLinerTerms() {
+    if (!linerTermsEl || linerTermsEl.value) return;   // don't override an existing choice
+    var c = (cargoTypeEl.value || "").toLowerCase();
+    for (var i = 0; i < FREE_OUT_CARGO_KEYWORDS.length; i++) {
+      if (c.indexOf(FREE_OUT_CARGO_KEYWORDS[i]) > -1) { linerTermsEl.value = "Free Out (FO)"; return; }
+    }
+  }
+
+  function autoDays() {
+    var rate = CARGO_STAY_RATES[cargoTypeEl.value];
+    var qty = parseFloat(cargoQtyEl.value) || 0;
+    return (rate && qty) ? Math.round(qty / rate) : null;
+  }
+
+  function recalcPortStay() {
+    var auto = autoDays();
+    if (auto !== null) {
+      var rate = CARGO_STAY_RATES[cargoTypeEl.value];
+      var qty = parseFloat(cargoQtyEl.value) || 0;
+      // Pre-fill the (editable) box with the auto figure unless the user has typed their own.
+      if (!userEditedPortStay) portStayEl.value = auto.toFixed(1);
+      portStayNote.innerHTML = "Auto: " + qty + " MT ÷ " + rate + " MT/day ≈ <b>" + auto.toFixed(1) +
+        " days</b>. Edit the box if the receiver's discharge rate differs.";
+    } else {
+      portStayNote.textContent = "No standard rate for this cargo — enter the port stay days in the box.";
+    }
+  }
+
+  cargoTypeEl.addEventListener("change", function () { userEditedPortStay = false; recalcPortStay(); applyDefaultLinerTerms(); });
+  cargoQtyEl.addEventListener("input", recalcPortStay);
+  portStayEl.addEventListener("input", function () { userEditedPortStay = true; });
+  recalcPortStay();
+  applyDefaultLinerTerms();
+</script>
+{% endblock %}

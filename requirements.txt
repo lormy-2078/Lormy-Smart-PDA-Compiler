@@ -1,0 +1,10 @@
+flask
+openpyxl
+xlrd
+reportlab
+python-docx
+pdfplumber
+anthropic
+python-dotenv
+extract-msg
+pymupdf

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Tariff Reference{% endblock %}
+{% block content %}
+<div class="card" id="tariff-top">
+  <h1>Tariff Reference</h1>
+  <p class="muted">The full digitized <b>GPHA Port Tariff (August 2023)</b> &mdash; every schedule, every code, plus the General Terms
+    and Conditions &mdash; searchable by code or keyword. This is the source catalog; the smaller <a href="/rates">Rate Library</a>
+    is the curated subset actually used to price PDAs. Rows already wired into the Rate Library are marked
+    <span class="badge split">in use</span>. Other authorities (Ghana Maritime Authority, Ghana Shippers' Authority, etc.) will
+    show up here too once their tariffs are digitized.</p>
+
+  <form method="get" action="/tariff">
+    <div class="row">
+      <div style="flex:3">
+        <label>Search by code or keyword</label>
+        <input type="text" name="q" value="{{ q }}" placeholder="e.g. 1A1001, pilotage, clinker, anchorage...">
+      </div>
+      <div>
+        <label>Authority</label>
+        <select name="authority">
+          <option value="" {% if not authority %}selected{% endif %}>Select authority</option>
+          {% for a in authorities %}
+          <option value="{{ a }}" {% if a == authority %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <button type="submit">Search</button>
+  </form>
+
+  {% if not authority %}
+  <p class="muted" style="margin-top:20px">Select an authority above to view its tariff{% if q %} (keyword search also needs an authority selected){% endif %}.</p>
+  {% else %}
+  <p class="muted">
+    {{ result_count }} result(s) in {{ authority }}{% if q %} for "{{ q }}"{% endif %}.
+  </p>
+  {% endif %}
+</div>
+
+{% if grouped|length > 1 %}
+<div class="card">
+  <h2>Jump to Schedule</h2>
+  <ul style="columns:2; list-style:none; padding:0; margin:0;">
+    {% for sched in grouped %}
+    <li style="margin-bottom:6px;">
+      <a href="#schedule-{{ loop.index0 }}">{{ sched.schedule }}</a>
+      <span class="muted">({{ sched.sections|map(attribute='rows')|map('length')|sum }})</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% for sched in grouped %}
+<div class="card" id="schedule-{{ loop.index0 }}">
+  <h2>{{ sched.schedule }}</h2>
+  {% for sec in sched.sections %}
+  <h3 style="font-size:13px; color:#666; margin:14px 0 4px;">{{ sec.section }} {% if sec.unit_label %}<span class="muted">&middot; {{ sec.unit_label }}</span>{% endif %}</h3>
+  <table>
+    <tr><th>Code</th><th>Description</th><th>Rate</th><th>Remarks</th><th></th></tr>
+    {% for item in sec.rows %}
+    <tr>
+      <td>{{ item.code }}</td>
+      <td>{{ item.description }}</td>
+      <td style="white-space:pre-line">{{ item.rate_text }}</td>
+      <td class="muted">{{ item.remarks }}{% if item.section_notes %}<br><i>{{ item.section_notes }}</i>{% endif %}</td>
+      <td>{% if item.code in linked_codes %}<span class="badge split">in use</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+  {% if grouped|length > 1 %}<a href="#tariff-top" class="muted">&uarr; Back to top</a>{% endif %}
+</div>
+{% endfor %}
+
+{% if authority and not grouped %}
+<div class="card"><p class="muted">No matches in {{ authority }}{% if q %} for "{{ q }}"{% endif %}. Try a shorter keyword or a charge code.</p></div>
+{% endif %}
+{% endblock %}

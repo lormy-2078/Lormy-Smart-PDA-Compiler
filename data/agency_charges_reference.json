@@ -1,0 +1,42 @@
+{
+  "authority": "The company (agency-set, not a published GPHA/GMA/GSA tariff)",
+  "notes": "Started 2026-08-29. Everything in this file is a charge the AGENCY sets and confirms from its own real issued PDAs and operational practice -- never inferred, never guessed. It exists because the app's engine (Smart_PDA_GeneratorV2.html) was pricing containers with no Admin/Release Fee at all -- the tonnage version of that fee only ever loops over billable(), which returns [] for a containers-category job, so the fee (and its GETFUND/VAT) silently never printed on any container PDA. The user asked for these rates to be kept here going forward: 'add these to the agency charges in tariff -- and we will do this henceforth once a new admin/release charges is found.' Add a new row here every time a new agency-set admin/release rate is confirmed, the same discipline the GPHA/GMA/GSA reference files already keep for their own rates -- read the source before writing a number, never derive one from surrounding structure.",
+  "rows": [
+    {
+      "kind": "rate",
+      "authority": "The company",
+      "schedule": "Admin / Release Fee -- Containers",
+      "section": "Container intake (all movements)",
+      "unit_label": "Per Box",
+      "code": "CADMIN-20",
+      "description": "20' container, any class",
+      "rate_text": "180.00",
+      "remarks": "Confirmed by the user, 2026-08-29: \"Admin is 20FT $180 and 40ft and above $360.\" Implemented in Smart_PDA_GeneratorV2.html as CADMIN_CTR['20']. Billed on the receiver (never the principal, per the 2026-08-19 rule that the admin/release fee is always a local charge on whoever takes delivery), plus GETFUND + NHIL (5%) and VAT (15%) on top, same as every other admin fee in the app.",
+      "section_notes": ""
+    },
+    {
+      "kind": "rate",
+      "authority": "The company",
+      "schedule": "Admin / Release Fee -- Containers",
+      "section": "Container intake (all movements)",
+      "unit_label": "Per Box",
+      "code": "CADMIN-40",
+      "description": "40' and above (40', 45'), any class",
+      "rate_text": "360.00",
+      "remarks": "Confirmed by the user, 2026-08-29: \"Admin is 20FT $180 and 40ft and above $360.\" \"And above\" explicitly covers 45' as well as 40' -- no separate 45' figure was needed. Implemented as CADMIN_CTR['40'] and CADMIN_CTR['45']. Same GETFUND/VAT and receiver-only billing as CADMIN-20.",
+      "section_notes": ""
+    },
+    {
+      "kind": "rate",
+      "authority": "The company",
+      "schedule": "Admin / Release Fee -- Oil & Gas Cargo",
+      "section": "Ninth Schedule oil & gas calls, priced on revenue tons",
+      "unit_label": "Per Tonne",
+      "code": "OG_ADMIN",
+      "description": "Admin/Release Fee on an oil & gas related cargo call, billed on the revenue tons (higher of weight or measurement), same basis as port dues and the gate fee",
+      "rate_text": "5.00",
+      "remarks": "Originally set at 4.50/t from the issued MV JOE receiver PDA (user, 2026-08-19: \"the admin charge for this type of cargo is 4.50 per tonne as stated in PDA\"). Revised to 5.00/t, 2026-08-30, after a second real document (BBC AFRICA / MV BBC XINGANG, cargo OIL WELL EQUIP) billed it at 5.00/t and the user confirmed: \"since the admin is 5$ per t on an oil and gas, make that the admin charge for an oil and gas related cargo.\" Implemented in Smart_PDA_GeneratorV2.html as OG_ADMIN.",
+      "section_notes": ""
+    }
+  ]
+}

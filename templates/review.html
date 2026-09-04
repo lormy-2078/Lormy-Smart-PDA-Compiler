@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}{{ call.vessel }} &mdash; Review{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ call.vessel or 'Unnamed Vessel' }} &mdash; {{ call.our_ref or 'no ref' }}</h1>
+  <p class="muted">{{ call.cargo_type }} discharge at {{ call.port }} &middot; GRT {{ '%.0f'|format(call.grt or 0) }} &middot; {{ '%.0f'|format(call.cargo_qty_mt or 0) }} qty &middot; Provisional stay {{ '%.1f'|format(call.port_stay_days or 0) }} days</p>
+
+  <h2>Billing Decision (Rules Engine, Module D)</h2>
+  {% if call.billing_decision == 'PDA1_ONLY' %}
+    <span class="badge pda1only">PDA 1 only</span>
+  {% else %}
+    <span class="badge split">PDA 1 + PDA 2</span>
+  {% endif %}
+  <p class="muted">{{ call.billing_reason }}</p>
+</div>
+
+{% set pda2_applicable = call.billing_decision != 'PDA1_ONLY' %}
+{% if pda2_applicable %}
+<div class="card">
+  <h2>Upload Cargo Documents</h2>
+  <p class="muted">Do this first, before Drivers/calculations below &mdash; the cargo manifest, Bill of
+    Lading, or packing list states things the appointment email usually doesn't (the real receiver, BL
+    number, exact cargo weight, piece count). A single manifest often carries several Bills of Lading (one
+    per MR number) &mdash; all of them are read and shown below for review before anything is created.</p>
+  <form method="post" action="/calls/{{ call.call_id }}/bl/extract" enctype="multipart/form-data">
+    <label>Cargo Manifest / Bill of Lading / Packing List</label>
+    <input type="file" name="file" accept=".pdf,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp">
+    <button type="submit">Extract from Document</button>
+    {% if not ai_enabled %}<p class="muted">Set an ANTHROPIC_API_KEY to enable this (see README).</p>{% endif %}
+  </form>
+
+  {% if bl_preview %}
+  <h3>Extracted Bills of Lading <span class="badge low">review before creating</span></h3>
+  <p class="muted">{{ bl_preview|length }} Bill(s) of Lading read from the document. Charges are on <b>gross</b>
+    weight (MT). CBM = Bags &times; Multiplier (multiplier defaulted from bag size &mdash; edit any cell). Untick
+    a row to skip it.</p>
+  <form method="post" action="/calls/{{ call.call_id }}/bl/create_all">
+    <div style="overflow-x:auto">
+      <table>
+        <tr><th>Create</th><th>BL / MR No.</th><th>Receiver</th><th>Attn</th><th>Gross MT</th><th>Bags</th><th>Mult.</th><th>CBM</th></tr>
+        {% for b in bl_preview %}
+        <tr>
+          <td style="text-align:center"><input type="checkbox" name="include" value="{{ loop.index0 }}" checked></td>
+          <td><input name="bl_number" value="{{ b.bl_number }}" style="width:110px"></td>
+          <td><input name="receiver" value="{{ b.receiver }}" style="min-width:220px"></td>
+          <td><input name="receiver_attn" value="{{ b.receiver_attn }}" style="width:120px"></td>
+          <td><input name="cargo_qty_mt" type="number" step="0.001" value="{{ b.cargo_qty_mt }}" style="width:90px"></td>
+          <td><input name="bags" type="number" step="1" value="{{ b.pieces }}" style="width:70px"></td>
+          <td><input name="cbm_multiplier" type="number" step="0.01" value="{{ b.cbm_multiplier }}" style="width:70px"></td>
+          <td><input name="cargo_qty_cbm" type="number" step="0.01" value="{{ b.cargo_qty_cbm }}" style="width:80px"></td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <button type="submit">Create all ticked Bills of Lading</button>
+  </form>
+  {% endif %}
+
+  <h3>Add a Bill of Lading manually</h3>
+  <p class="muted">For a one-off BL, or a cargo whose Receiver PDA is prepared per BL. Adding one or more BLs
+    replaces the single call-level Receiver PDA below with one priced Receiver PDA per BL, on export too.</p>
+  <form method="post" action="/calls/{{ call.call_id }}/bl/add">
+    <div class="row">
+      <div><label>BL Number</label><input name="bl_number"></div>
+      <div><label>Receiver (leave blank to use the call's Receiver)</label><input name="receiver"></div>
+      <div><label>Receiver Attn</label><input name="receiver_attn"></div>
+    </div>
+    <div class="row">
+      <div><label>Cargo Qty (Gross MT)</label><input name="cargo_qty_mt" type="number" step="0.01"></div>
+      <div><label>Number of Bags/Pieces</label><input name="bags" id="bl_bags" type="number" step="1"></div>
+      <div><label>CBM Multiplier</label><input name="cbm_multiplier" id="bl_mult" type="number" step="0.01"></div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Cargo Qty (CBM)</label>
+        <input name="cargo_qty_cbm" id="bl_cbm" type="number" step="0.01">
+        <p class="muted">Auto = Bags &times; Multiplier &mdash; edit directly to override.</p>
+      </div>
+      <div><label>Tally ($, free-entry)</label><input name="tally_amount" type="number" step="0.01"></div>
+    </div>
+    <button type="submit">Add Bill of Lading</button>
+  </form>
+  <script>
+    (function () {
+      var bags = document.getElementById("bl_bags");
+      var mult = document.getElementById("bl_mult");
+      var cbm = document.getElementById("bl_cbm");
+      var userEditedCbm = false;
+      function recalc() {
+        if (userEditedCbm) return;
+        var b = parseFloat(bags.value) || 0;
+        var m = parseFloat(mult.value) || 0;
+        if (b && m) cbm.value = (b * m).toFixed(2);
+      }
+      bags.addEventListener("input", recalc);
+      mult.addEventListener("input", recalc);
+      cbm.addEventListener("input", function () { userEditedCbm = true; });
+    })();
+  </script>
+
+  {% if bl_rows %}
+  <h3>Distribute Tally across Bills of Lading</h3>
+  <p class="muted">Enter one call-wide Tally lumpsum &mdash; it's split across the {{ bl_rows|length }}
+    Bill(s) of Lading by their gross-weight (MT) share and written into each BL's Tally. Total cargo on the
+    BLs: <b>{{ '%.3f'|format(bl_total_mt) }} MT</b>.</p>
+  <form method="post" action="/calls/{{ call.call_id }}/bl/distribute_tally">
+    <div class="row">
+      <div><label>Total Tally ($)</label><input name="tally_total" type="number" step="0.01" value="{{ call.tally_total or '' }}"></div>
+      <div style="display:flex; align-items:flex-end"><button type="submit">Distribute by gross weight</button></div>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="post" action="/calls/{{ call.call_id }}/reprice">
+    <input type="hidden" name="cargo_type" value="{{ call.cargo_type }}">
+    <details class="drivers">
+    <summary>Drivers &mdash; vessel &amp; cargo figures, port stay, liner terms (tap to review or recalculate)</summary>
+    <div class="drivers-body">
+    <div class="row">
+      <div><label>GRT</label><input name="grt" type="number" step="0.01" value="{{ call.grt }}"></div>
+      <div><label>LOA (m)</label><input name="loa" id="loa" type="number" step="0.01" value="{{ call.loa }}"></div>
+      <div><label>Cargo Quantity (MT)</label><input name="cargo_qty_mt" id="cargo_qty_mt" type="number" step="0.01" value="{{ call.cargo_qty_mt }}"></div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Cargo Quantity (CBM)</label>
+        <input name="cargo_qty_cbm" type="number" step="0.01" value="{{ call.cargo_qty_cbm or '' }}">
+        <p class="muted">Bagged Ammonium Nitrate only.</p>
+      </div>
+      <div>
+        <label>Is the vessel geared (has its own cranes)?</label>
+        <select name="vessel_geared">
+          <option value="" {% if not call.vessel_geared %}selected{% endif %}>-- Select --</option>
+          <option value="geared" {% if call.vessel_geared == 'geared' %}selected{% endif %}>Yes &mdash; vessel has its own cranes</option>
+          <option value="gearless" {% if call.vessel_geared == 'gearless' %}selected{% endif %}>No &mdash; needs GPHA Mobile Harbour Crane</option>
+        </select>
+        <p class="muted">If No (gearless), a $5,200 Min Crane Hire is added &mdash; to Principal under Liner Out, to Receiver under Free Out.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Provisional Port Stay (days)</label>
+        <input name="port_stay_days" id="port_stay_days" type="number" step="0.5" min="0" value="{{ '%.1f'|format(call.port_stay_days or 0) }}">
+        <p class="muted" id="port_stay_note">Cargo type: {{ call.cargo_type or '-' }}. Edit the box if the receiver's discharge rate differs.</p>
+      </div>
+      <div>
+        <label>Applicable Liner Terms</label>
+        <select name="liner_terms" id="liner_terms">
+          <option value="">-- Select Liner Terms --</option>
+          {% for lt in liner_terms_options %}
+          <option value="{{ lt }}" {% if call.liner_terms == lt %}selected{% endif %}>{{ lt }}</option>
+          {% endfor %}
+        </select>
+        <p class="muted">Drives whether this call needs PDA 1 only or PDA 1 + PDA 2 &mdash; takes priority over the appointment text.</p>
+      </div>
+    </div>
+    <label>Appointment text (re-run rules engine, used when Liner Terms is not selected)</label>
+    <textarea name="appointment_text" rows="3">{{ call.appointment_text }}</textarea>
+
+    <details class="drivers">
+      <summary>Review and confirm Vessel's Marine Operations</summary>
+      <div class="drivers-body">
+        <p class="muted">The vessel's movements in / out of the berth. Gangway watchmen are billed per Provisional Port Stay day automatically.</p>
+        <div class="row">
+          <div><label>Movements In</label><input name="movements_in" type="number" value="{{ call.movements_in }}"></div>
+          <div><label>Movements Out</label><input name="movements_out" type="number" value="{{ call.movements_out }}"></div>
+          <div><label>Movements In+Out</label><input name="movements_in_out" type="number" value="{{ call.movements_in_out }}"></div>
+        </div>
+      </div>
+    </details>
+    <button type="submit">Recalculate</button>
+    </div>
+    </details>
+  </form>
+</div>
+
+<script>
+  // Mirrors pda_engine/port_stay.py -- client-side preview only, server recomputes on submit.
+  var CARGO_STAY_RATES = {
+    "Bulk Clinker": 7000, "Bulk Gypsum": 7000, "Bulk Limestone": 7000, "Bulk Slag": 7000,
+    "Bulk Quicklime": 2300, "Bulk Bauxite": 18000, "Bulk Manganese": 35000,
+    "Bulk Wheat": 4000, "Bulk Cocoa": 5000
+  };
+  var CALL_CARGO_TYPE = {{ call.cargo_type|tojson }};
+  var cargoQtyEl = document.getElementById("cargo_qty_mt");
+  var portStayEl = document.getElementById("port_stay_days");
+  var portStayNote = document.getElementById("port_stay_note");
+  var userEditedPortStay = false;   // don't clobber the stored/edited value while recalculating
+
+  function autoDays() {
+    var rate = CARGO_STAY_RATES[CALL_CARGO_TYPE];
+    var qty = parseFloat(cargoQtyEl.value) || 0;
+    return (rate && qty) ? Math.round(qty / rate) : null;
+  }
+
+  function recalcPortStay() {
+    var auto = autoDays();
+    if (auto !== null) {
+      var rate = CARGO_STAY_RATES[CALL_CARGO_TYPE];
+      var qty = parseFloat(cargoQtyEl.value) || 0;
+      if (!userEditedPortStay) portStayEl.value = auto.toFixed(1);
+      portStayNote.innerHTML = "Cargo type: " + CALL_CARGO_TYPE + ". Auto: " + qty + " MT ÷ " + rate +
+        " MT/day ≈ <b>" + auto.toFixed(1) + " days</b>. Edit the box if the receiver's discharge rate differs.";
+    } else {
+      portStayNote.textContent = "Cargo type: " + (CALL_CARGO_TYPE || "-") + " (no standard rate — enter port stay days in the box).";
+    }
+  }
+
+  // Only the cargo quantity drives the auto recompute here (cargo type is fixed on the review screen).
+  cargoQtyEl.addEventListener("input", recalcPortStay);
+  portStayEl.addEventListener("input", function () { userEditedPortStay = true; });
+</script>
+
+{% macro line_table(title, lines, open=false) %}
+  {% set subtotal = lines | rejectattr('stated_only') | map(attribute='amount') | sum %}
+  <details class="section"{% if open %} open{% endif %}>
+    <summary>{{ title }} <span class="muted">&mdash; {{ lines|length }} charge{{ 's' if lines|length != 1 }}, Sub Total ${{ '%.2f'|format(subtotal) }}</span></summary>
+    <table>
+      <tr><th>Code</th><th>Description</th><th>Basis</th><th>Rate</th><th>Qty</th><th>Amount</th></tr>
+      {% for line in lines %}
+      <tr>
+        <td>{{ line.tariff_ref_code or line.charge_code }}</td>
+        <td>{{ line.description }}{% if line.is_placeholder %}<br><span class="placeholder">PLACEHOLDER &mdash; needs real rate</span>{% endif %}</td>
+        <td>{{ line.unit_label }}</td>
+        <td>{% if line.pct %}{{ '%.0f'|format(line.rate * 100) }}%{% else %}${{ fmt_rate(line.rate) }}{% endif %}</td>
+        <td>{% if line.stated_only %}&mdash;{% else %}{{ '%.2f'|format(line.qty) }}{% endif %}</td>
+        <td>{% if line.stated_only %}<span class="muted">stated only</span>{% else %}${{ '%.2f'|format(line.amount) }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+      <tr class="subtotal"><td colspan="5">Sub Total</td><td>${{ '%.2f'|format(subtotal) }}</td></tr>
+    </table>
+  </details>
+{% endmacro %}
+
+<div class="card">
+  <div class="tabs">
+    <button type="button" class="tab-btn active" id="tab-btn-pda1" onclick="showTab('pda1')">Principal (PDA 1)</button>
+    <button type="button" class="tab-btn" id="tab-btn-pda2" onclick="showTab('pda2')" {% if not pda2_applicable %}disabled{% endif %}>
+      Receiver (PDA 2){% if not pda2_applicable %} &mdash; not applicable{% endif %}
+    </button>
+  </div>
+  <div class="tab-body">
+    <div class="tab-panel active" id="tab-pda1">
+      <h2>PDA 1 (Principal)</h2>
+      {% set ship_lines = priced.PDA1.lines | selectattr('group', 'equalto', 'Ship Related Expenses') | list %}
+      {% set pda1_cargo_lines = priced.PDA1.lines | selectattr('group', 'equalto', 'Cargo Related Expenses') | list %}
+      {% set others_lines = priced.PDA1.lines | selectattr('group', 'equalto', 'Others General') | list %}
+      {{ line_table("Ship Related Expenses", ship_lines) }}
+      {% if pda1_cargo_lines %}
+      {{ line_table("Cargo Related Expenses (folded onto Principal under Liner Out / Full Liner Terms)", pda1_cargo_lines) }}
+      {% endif %}
+      {{ line_table("Others General", others_lines) }}
+      <p class="subtotal-grand">Grand Total: ${{ '%.2f'|format(priced.PDA1.subtotal) }}</p>
+    </div>
+    <div class="tab-panel" id="tab-pda2">
+      {% if pda2_applicable %}
+        {% if bl_priced %}
+          <h2>PDA 2 (Receiver / Consignee) &mdash; per Bill of Lading</h2>
+          <p class="muted">This cargo's Receiver PDA is prepared per Bill of Lading &mdash; each BL below gets its own priced Receiver PDA and its own sheet/page on export.</p>
+          {% for bl, bl_result in bl_priced %}
+          <details class="card">
+            <summary>BL {{ bl.bl_number or '(no number)' }} &mdash; {{ bl.receiver or call.receiver or 'receiver not set' }} <span class="muted">&mdash; Total ${{ '%.2f'|format(bl_result.PDA2.subtotal) }}</span></summary>
+            <p class="muted">To: {{ bl.receiver or call.receiver or 'receiver not set' }}{% if bl.receiver_attn or call.receiver_attn %} &middot; Att: {{ bl.receiver_attn or call.receiver_attn }}{% endif %}</p>
+            <p class="muted">{{ '%.2f'|format(bl.cargo_qty_mt or 0) }} MT / {{ '%.2f'|format(bl.cargo_qty_cbm or 0) }} CBM{% if bl.tally_amount %} &middot; Tally ${{ '%.2f'|format(bl.tally_amount) }}{% endif %}</p>
+            {% set cargo_lines = bl_result.PDA2.lines | selectattr('group', 'equalto', 'Cargo Related Expenses') | list %}
+            {% set og_lines = bl_result.PDA2.lines | selectattr('group', 'equalto', 'Others General') | list %}
+            {{ line_table("Cargo Related Expenses", cargo_lines) }}
+            {{ line_table("Others General", og_lines) }}
+            <p class="subtotal-grand">BL Total: ${{ '%.2f'|format(bl_result.PDA2.subtotal) }}</p>
+            <form method="post" action="/calls/{{ call.call_id }}/bl/{{ bl.bl_id }}/delete" onsubmit="return confirm('Remove this Bill of Lading?');">
+              <button type="submit" class="secondary">Remove this BL</button>
+            </form>
+          </details>
+          {% endfor %}
+        {% else %}
+          <h2>PDA 2 (Receiver / Consignee)</h2>
+          <p class="muted">To: {{ call.receiver or 'receiver not set' }}{% if call.receiver_attn %} &middot; Att: {{ call.receiver_attn }}{% endif %} &middot; Ref: {{ call.our_ref or '-' }}A</p>
+          {% set cargo_lines = priced.PDA2.lines | selectattr('group', 'equalto', 'Cargo Related Expenses') | list %}
+          {% set og_lines = priced.PDA2.lines | selectattr('group', 'equalto', 'Others General') | list %}
+          {{ line_table("Cargo Related Expenses", cargo_lines) }}
+          {{ line_table("Others General", og_lines) }}
+          <p class="subtotal-grand">Grand Total: ${{ '%.2f'|format(priced.PDA2.subtotal) }}</p>
+        {% endif %}
+      {% else %}
+        <p class="placeholder">Load/Discharge terms are '{{ call.liner_terms or 'not selected' }}' &mdash; the vessel/owner covers discharge under these terms, so there is no separate receiver account and PDA 2 is not billed. (It is still calculated and stored internally &mdash; switch the terms above and recalculate if that changes.)</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTab(name) {
+    document.querySelectorAll(".tab-panel").forEach(function (el) { el.classList.remove("active"); });
+    document.querySelectorAll(".tab-btn").forEach(function (el) { el.classList.remove("active"); });
+    document.getElementById("tab-" + name).classList.add("active");
+    document.getElementById("tab-btn-" + name).classList.add("active");
+  }
+</script>
+
+<div class="card">
+  <h2>Export</h2>
+  <a class="btn export" href="/calls/{{ call.call_id }}/export/excel">Download Excel (.xlsx)</a>
+  <a class="btn export" href="/calls/{{ call.call_id }}/export/pdf">Download PDF</a>
+  {% if not pda2_applicable %}<p class="muted">Export includes PDA 1 only &mdash; these Load/Discharge terms have no separate receiver account.</p>{% else %}<p class="muted">Export includes both the Principal (PDA 1) and Receiver (PDA 2) documents.</p>{% endif %}
+  <a class="btn secondary" href="/">Back to History</a>
+</div>
+{% endblock %}
