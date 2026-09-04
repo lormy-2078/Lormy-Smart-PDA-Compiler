@@ -612,6 +612,14 @@ body.x-exporting .doc{transform:none!important}
 .doc-t b{font-size:var(--f3);color:var(--brandInk)}
 .itab{width:100%;font-size:var(--f1);margin-bottom:14px}
 .itab td{border:none;padding:2px 6px}
+/* The particulars pairs sit on a shared column grid instead of inline flow,
+   so IMO lines up under Vessel and Flag under GRT on every row — the second
+   pair no longer drifts with the length of the first value. */
+.itab .kv{display:grid;grid-template-columns:48px minmax(0,1fr) 42px minmax(0,1fr);
+ column-gap:6px;align-items:baseline}
+.itab .kv2{display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:6px;align-items:baseline}
+.itab .kv .w3{grid-column:2/5}
+.itab .kv>b,.itab .kv2>b{white-space:nowrap}
 .itab b{color:var(--brandInk)}
 .doc h4{font-size:var(--f2);color:var(--brandInk);margin:14px 0 4px}
 .doc table{border-color:var(--paperLine)}
@@ -703,11 +711,11 @@ body.x-exporting .doc{transform:none!important}
    also need to be large. The user, 2026-09-01: "it shouldn't be too big". */
 /* Sized to its contents, not to a round number: at a fixed 250px the label broke
    across two lines — "GRAND TOTAL / PAYABLE" — which is a heading stammering. */
-.pf2 .doc .foot .tot-box{width:auto;min-width:230px;max-width:320px;margin-left:auto;
+.pf2 .doc .tot-box{width:auto;min-width:230px;max-width:320px;margin-left:auto;
  /* right edge lands under the amount column, not under any trailing columns —
     the gutter is measured by alignFoot() at the same widths the sheet prints. */
  margin-right:var(--amtGut,0px)}
-.pf2 .doc .foot tr.gt td{white-space:nowrap}
+.pf2 .doc tr.gt td{white-space:nowrap}
 /* …and the block stops at the printed edge, not at the screen's. See alignFoot();
    zero on paper and during the fit, where the Action column is not there at all. */
 .pf2 .doc .foot{padding-right:var(--actGut,0px)}
@@ -777,13 +785,12 @@ body.fitting .doc .foot{padding-right:0}
 .ed:empty::before{content:'—';color:var(--ink3)}
 tr.sub-r td{background:var(--paperHead);font-weight:700;border-top:1px solid var(--line2)}
 tr.gt td{background:var(--brand);color:var(--onDark);font-weight:700;font-size:var(--f2)}
-.tot-box{width:340px;margin:var(--s4) 0 0 auto}
-/* Remittance left, grand total right, on one row — see footHtml(). The two
-   blocks keep their own widths; only the wasted band between them goes. */
+.tot-box{width:auto;min-width:260px;max-width:360px;
+ margin:var(--s3) var(--amtGut,0px) var(--s4) auto}
+/* The remittance closes the sheet under the total's rule — see footHtml(). */
 .foot{display:flex;gap:var(--s4);align-items:flex-start;margin-top:var(--s4)}
 .foot .bank{flex:1 1 auto;min-width:0;margin-top:0}
-.foot .tot-box{flex:0 0 auto;margin:0}
-@media(max-width:700px){.foot{flex-direction:column}.foot .tot-box{width:100%;margin-left:auto}}
+@media(max-width:700px){.foot{flex-direction:column}}
 .bank{background:var(--paperHead);border:1px solid var(--paperLine);border-radius:var(--r1);
   padding:12px 14px;font-size:var(--f0);line-height:1.6;margin-top:var(--s4)}
 /* The heading and the closing instruction are their own lines in BOTH looks —
@@ -1578,7 +1585,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   .doc tbody.ord td.c-a::after{display:none!important}
   .note{font-size:calc(7.8px * var(--pdaScale,1));padding:4px 6px;margin:calc(6px * var(--pdaScale,1)) 0;page-break-inside:avoid}
   .bank{font-size:calc(8.4px * var(--pdaScale,1));padding:6px 8px;page-break-inside:avoid}
-  .tot-box{width:300px;page-break-inside:avoid}.tot-box td{padding:4px 8px}
+  .tot-box{width:auto;min-width:230px;max-width:340px;margin:6px var(--amtGut,0px) 10px auto;page-break-inside:avoid}.tot-box td{padding:4px 8px}
   .foot{page-break-inside:avoid}
   tr.gt td{font-size:12px}
   tbody tr:nth-child(even)>td,tbody tr:hover>td{background:#fff!important}
@@ -1654,7 +1661,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.2.0 · 04 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.2.2 · 04 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -2454,7 +2461,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.2.0';
+const VER='2.2.2';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -10630,10 +10637,10 @@ function docList(){
    one printed sheet and two. Built as one helper because three documents render
    this footer — principal, cargo interest, and the separated admin account — and
    they must not drift apart. */
-const footHtml=(tot)=>'<div class="foot">'
- +'<div class="bank">'+bankHtml()+'</div>'
- +'<div class="tot-box"><table><tr class="gt"><td>GRAND TOTAL PAYABLE</td>'
- +'<td class="num">'+$m(tot)+'</td></tr></table></div></div>';
+const totHtml=(tot)=>'<div class="tot-box"><table><tr class="gt"><td>GRAND TOTAL PAYABLE</td>'
+ +'<td class="num">'+$m(tot)+'</td></tr></table></div>';
+const footHtml=()=>'<div class="foot">'
+ +'<div class="bank">'+bankHtml()+'</div></div>';
 function paintDocs(){
  const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
  const keys=docList(), j=S.j, ls=billable();
@@ -10684,23 +10691,23 @@ function paintDocs(){
   +'<div class="sm">Our ref: <b>'+hcell('ref',ref)+'</b></div>'
   +'<div class="sm">Date: '+esc(today)+'</div></div></div>'
   +'<table class="itab">'+(blNo?'<tr><td colspan="2"><b>B/L no.:</b> '+esc(blNo)+'</td></tr>':'')
-  +'<tr><td><b>To:</b> '+dcell('docTo',dk,(j.docTo&&j.docTo[dk])||to,'Addressee')
-    +'</td><td><b>Vessel:</b> '+hcell('vessel',String(j.vessel||'').trim(),'TBN')+'</td></tr>'
-  +'<tr><td><b>Attn:</b> '+dcell('docAttn',dk,(j.docAttn&&j.docAttn[dk])||attn,'Contact')
-    +'</td><td><b>IMO:</b> '+hcell('imo',j.imo,'TBN')
-    +' &nbsp; <b>Flag:</b> '+hcell('flag',j.flag,'TBN')+'</td></tr>'
-  +'<tr><td><b>Cargo:</b> '+hcell('cargoTxt',cargo)+'</td><td><b>Type:</b> '+hcell('vtype',j.vtype)
-    +' &nbsp; <b>GRT:</b> '+hcell('grt',j.grt)+'</td></tr>'
-  +'<tr><td><b>Prov. cargo qty:</b> '+hcell('qtyTxt',qty)+'</td><td><b>LOA:</b> '+hcell('loa',j.loa)+' m'
-    +' &nbsp; <b>Draft:</b> '+hcell('draft',j.draft,'TBN')+(num(j.draft)>0?' m':'')+'</td></tr>'
-  +'<tr><td><b>Prov. port stay:</b> '+hcell('stay',j.stay||'0')+' days</td>'
-    +'<td><b>ETA:</b> '+hcell('eta',j.eta,'TBA')+'</td></tr>'
+  +'<tr><td><span class="kv2"><b>To:</b> '+dcell('docTo',dk,(j.docTo&&j.docTo[dk])||to,'Addressee')+'</span>'
+    +'</td><td><span class="kv"><b>Vessel:</b><span class="w3">'+hcell('vessel',String(j.vessel||'').trim(),'TBN')+'</span></span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Attn:</b> '+dcell('docAttn',dk,(j.docAttn&&j.docAttn[dk])||attn,'Contact')+'</span>'
+    +'</td><td><span class="kv"><b>IMO:</b> '+hcell('imo',j.imo,'TBN')
+    +'<b>Flag:</b> '+hcell('flag',j.flag,'TBN')+'</span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Cargo:</b> '+hcell('cargoTxt',cargo)+'</span></td><td><span class="kv"><b>Type:</b> '+hcell('vtype',j.vtype)
+    +'<b>GRT:</b> '+hcell('grt',j.grt)+'</span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Prov. cargo qty:</b> '+hcell('qtyTxt',qty)+'</span></td><td><span class="kv"><b>LOA:</b> <span class="v">'+hcell('loa',j.loa)+' m</span>'
+    +'<b>Draft:</b> <span class="v">'+hcell('draft',j.draft,'TBN')+(num(j.draft)>0?' m':'')+'</span></span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Prov. port stay:</b> <span class="v">'+hcell('stay',j.stay||'0')+' days</span></span></td>'
+    +'<td><span class="kv"><b>ETA:</b><span class="w3">'+hcell('eta',j.eta,'TBA')+'</span></span></td></tr>'
   /* Liner terms are an internal routing decision — they settle which document each
      cargo charge lands on. The party reading the PDA does not need them on its
      face, and printing them invites a conversation about terms on a document that
      is about money. */
-  +'<tr><td><b>Port of call:</b> '+esc(j.port)+'</td><td>'
-    +(num(j.fx)>0?('<b>Exchange rate:</b> '+hcell('fx',j.fx)+' GH¢/US$'):'')+'</td></tr>'
+  +'<tr><td><span class="kv2"><b>Port of call:</b> <span class="v">'+esc(j.port)+'</span></span></td><td>'
+    +(num(j.fx)>0?('<span class="kv" style="grid-template-columns:max-content minmax(0,1fr)"><b>Exchange rate:</b> <span class="v">'+hcell('fx',j.fx)+' GH¢/US$</span></span>'):'')+'</td></tr>'
   /* THE FINAL-ACCOUNT FIELDS APPEAR ONLY IN FINAL-ACCOUNT MODE. A proforma
      carrying eight empty "Actual" boxes invites the reader to wonder what is
      missing; these are the agency template's own tracking fields and they belong
@@ -10841,7 +10848,7 @@ function paintDocs(){
    +(cg.length?tbl('p-cargo',cg,true,'Cargo related expenses',sub(cg)):'')
    +tbl('p-others',ot,false,'Others / general',sub(ot))
    +addForm('p',[['ship','Ship related'],['others','Others']],null,null)
-   +footHtml(tot)+'</div></div>';
+   +totHtml(tot)+footHtml()+'</div></div>';
  }
  /* each cargo-interest document */
  keys.forEach((k,n)=>{
@@ -10875,13 +10882,13 @@ function paintDocs(){
    +(sep?(tRest?tbl('r-o-'+n,otRest,false,'Others / general',tRest):'')
         :tbl('r-o-'+n,ot,false,'Others / general',t2))
    +addForm(id,[['cargo','Cargo related'],['othersR','Others']],i2.rcv,k)
-   +footHtml(sep?(t1+tRest):(t1+t2))+'</div>'))
+   +totHtml(sep?(t1+tRest):(t1+t2))+footHtml()+'</div>'))
    +'</div>';
   if(sep&&!gateOn)h+='<div class="pda'+(S.doc===(k+ADMSFX)?' on':'')+'" data-d="'+esc(k+ADMSFX)+'"><div class="doc">'
    +head(i2.rcv+(addr?', '+addr:''),attn,docRef(n),comSum(rl),qtyHead(rl),i2.bl,k)
    +'<div class="note warn no-p">This is the <b>admin account</b> for '+esc(docRef(n))+' — the admin / release fee and its levy and VAT only. Every other charge is on the cargo PDA of the same reference.</div>'
    +tbl('r-a-'+n,otAdm,false,'Others / general',tAdm)
-   +footHtml(tAdm)+'</div></div>';
+   +totHtml(tAdm)+footHtml()+'</div></div>';
  });
  $('#docs').innerHTML=h;
  /* THE SELECTION OUTLIVES THE RE-RENDER. Every edit calls recalc(), which
@@ -15416,6 +15423,10 @@ async function exportPdf(){
    docEl.style.transform='';docEl.style.marginBottom='';
    p.style.height='';p.style.overflow='';
    document.body.classList.add('fitting');
+   /* Re-measure the total's right gutter at PRINT widths — the live value was
+      measured with the screen-only Action column still taking room, which
+      would drag the grand total left of the money column on paper. */
+   alignFoot();
    let cv;
    try{
     try{cv=await rasterDoc(docEl);}
@@ -15448,6 +15459,7 @@ async function exportPdf(){
     else docEl.style.removeProperty('--pdaScale');
     docEl.style.transform=saved.tf;docEl.style.marginBottom=saved.mb;
     p.style.height=saved.wh;p.style.overflow=saved.wo;
+    alignFoot();
    }
    /* PAGE GEOMETRY. The capture spans 192mm — A4 less the 9mm side margins —
       and 281mm of content height (less 8mm top and bottom). Whatever does not
