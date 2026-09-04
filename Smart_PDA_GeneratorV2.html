@@ -14,6 +14,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- EXPORT LIBRARIES. Excel and PDF files are built entirely in the browser:
+     ExcelJS writes the styled workbook, html2canvas photographs the rendered
+     document and jsPDF pages it onto A4. Same pattern as the reading trio
+     above — a CDN load with a graceful degradation: if any of them fails to
+     load (no network, blocked CDN) the export buttons say so plainly instead
+     of silently failing, and everything else in the app is untouched. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
    TOKENS — the single source of every colour in this file.
@@ -576,6 +585,13 @@ td input,td select{height:30px;padding:4px 7px;font-size:var(--f0);border-color:
 .docsel button:hover{background:var(--card);color:var(--ink)}
 .docsel button.on{background:var(--card);color:var(--brandInk);box-shadow:var(--e1)}
 .pda{display:none}.pda.on{display:block}
+/* During a PDF export every document must be laid out so each can be
+   photographed in turn — the class is held only for the length of the capture
+   and removed in a finally, so the screen returns to exactly what it showed.
+   The fit-transform is suspended for the same pass: the capture measures the
+   live element, and a scaled element would photograph at the wrong size. */
+body.x-exporting .pda{display:block!important}
+body.x-exporting .doc{transform:none!important}
 .doc{background:var(--paper);color:var(--paperInk);border:1px solid var(--paperLine);
   border-radius:var(--r2);padding:28px}
 .doc-h{display:flex;justify-content:space-between;gap:var(--s4);padding-bottom:14px;
@@ -1592,6 +1608,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
 <g id="i-x"><path d="M6 6l12 12M18 6 6 18"/></g>
 <g id="i-trash"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></g>
 <g id="i-key"><circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M17.5 5.5 20 8M15 8l2.5 2.5"/></g>
+<g id="i-download"><path d="M12 3.5V15m0 0 4.5-4.5M12 15l-4.5-4.5M4.5 18.5v1a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-1"/></g>
 </defs></svg>
 
 <a class="skip" href="#main">Skip to content</a>
@@ -7574,6 +7591,12 @@ function paintRail(){
   +      '<button class="rail-act p" onclick="actRecalc()" title="Recalculate every charge from the current figures">'+ico('refresh')+' Recalculate</button>'
   +      '<button class="rail-act save'+(dirty?' dirty':'')+'" onclick="saveJob()" title="Save this PDA to the library">'+ico('save')+' Save</button>'
   +      '<button class="rail-act" onclick="printDoc()" title="'+esc(fitTip())+'">'+ico('print')+' Print</button>'
+  /* FILE EXPORTS SIT BESIDE PRINT — same intent (produce the document), different
+     destination. Excel reads the document straight off the screen the way the
+     printer does, so columns, order, switches and overrides carry over exactly;
+     the PDF is a photograph of the rendered page, one file, every document. */
+  +      '<button class="rail-act" onclick="exportExcel()" title="Download every document of this call as one Excel workbook — a sheet per document">'+ico('download')+' Excel</button>'
+  +      '<button class="rail-act" onclick="exportPdf()" title="Download every document of this call as one PDF file">'+ico('file')+' PDF</button>'
   +      '<button class="rail-act" onclick="copySummary()" title="Copy a plain-text summary of this PDA">'+ico('copy')+' Copy</button>'
   +      '<button class="rail-act" onclick="actResetOrder()" title="Put every charge back in tariff order">↕ Order</button>'
   /* COLUMNS SITS WITH THE OTHER DOCUMENT TOOLS, NOT ABOVE THE DOCUMENT. It was a
@@ -14938,6 +14961,326 @@ function printDoc(){
  $$('.pda').forEach(p=>p.classList.toggle('print-me',p.dataset.d===S.doc));
  window.print();
  setTimeout(()=>$$('.pda').forEach(p=>p.classList.remove('print-me')),1200);
+}
+/* ════════════════ FILE EXPORTS ══════════════════════════════════════════════
+   Print reaches a printer; these two reach a mailbox. Both read the documents
+   the way the printer does — straight off the rendered screen — so the manual
+   order, switched-off lines, column edits, and every per-document override
+   carry into the file exactly as the operator arranged them. Nothing is
+   re-derived from the engine here; the DOM is the source, once.
+
+   EXCEL walks each document's DOM into a styled worksheet (one sheet per
+   document), turning currency text back into real numbers so the sheet sums.
+   PDF photographs each rendered page and sets it on A4 — one file, every
+   document, a page break between them, the same shape as the print job.
+
+   The libraries load from a CDN with the rest. If they are not there (offline,
+   blocked), the buttons say so plainly. No export ever changes the job. */
+let xBusy=false;
+function exportGate(){
+ if(xBusy){toast('An export is already building — give it a moment.','warn',4000);return false;}
+ const r=readiness();
+ if(r.e.length&&!confirm('This PDA still has missing details:\n\n• '+r.e.join('\n• ')+'\n\nExport anyway?'))return false;
+ /* A SORT IS A VIEW, AND A VIEW DOES NOT EXPORT — same rule as print. */
+ if(pdaSort){pdaSort=null;render();toast('Exporting the saved order, not the sorted view.','ok',5000);}
+ return true;
+}
+function exportBase(){
+ const j=S.j, base=String(j.ref||j.vessel||'draft').trim().replace(/[\\/:*?"<>|]+/g,'-');
+ return 'PDA_'+(base||'draft');
+}
+function dlBlob(blob,name){
+ const a=el('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+}
+function xSetBusy(on){
+ xBusy=on;
+ $$('.rail-act').forEach(b=>b.disabled=on);
+}
+/* ── EXCEL ─────────────────────────────────────────────────────────────────── */
+async function exportExcel(){
+ if(typeof ExcelJS==='undefined'){
+  toast('The Excel export needs a one-time internet connection to fetch its library. Reconnect and choose Excel again.','err',9000);return;}
+ if(!exportGate())return;
+ const pdas=$$('.pda');
+ if(!pdas.length){toast('Nothing to export yet — no document is rendered.','warn',6000);return;}
+ xSetBusy(true);
+ toast('Building the workbook — one sheet per document…','',6000);
+ try{
+  const wb=new ExcelJS.Workbook();
+  wb.creator='Automated PDA Generator';wb.created=new Date();
+  const used=[];
+  for(const p of pdas){
+   const doc=p.querySelector('.doc');if(!doc)continue;
+   const name=xlSheetName(p,used);used.push(name);
+   const ws=wb.addWorksheet(name,{pageSetup:{paperSize:9,orientation:'portrait',
+    fitToPage:true,fitToWidth:1,fitToHeight:0,
+    margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.2,footer:0.2}}});
+   ws.views=[{showGridLines:false}];
+   xlDoc(ws,doc);
+  }
+  const buf=await wb.xlsx.writeBuffer();
+  dlBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),exportBase()+'.xlsx');
+  toast('Workbook downloaded — '+used.length+' sheet(s), one per document.','ok',6000);
+ }catch(e){toast('The workbook could not be built ('+(e&&e.message||e)+').','err',9000);}
+ finally{xSetBusy(false);}
+}
+function xlSheetName(p,used){
+ const j=S.j, ref=String(j.ref||'').trim();
+ let s;
+ if(p.dataset.d==='principal')s=(ref||String(j.vessel||'').trim()||'Principal')+(ref?' Principal':'');
+ else{
+  const first=p.querySelector('.itab tr td');
+  const to=first?first.textContent.replace(/^To:\s*/i,'').trim():'';
+  s=((ref?ref+' ':'')+(to.split(/\s+/).slice(0,2).join(' ')||'Receiver'));
+ }
+ s=s.replace(/[\\\/\?\*\[\]:]/g,' ').replace(/\s+/g,' ').trim().slice(0,31)||'Document';
+ let u=s,n=2;while(used.map(x=>x.toLowerCase()).includes(u.toLowerCase())){u=s.slice(0,28)+'_'+(n++);}
+ return u;
+}
+/* The sheet works on an eight-column grid: enough for the widest charge table
+   the column editor can build, shared by the particulars block (four pairs)
+   and the settlement footer. Widths settle at the end from what was written.
+
+   One row cursor (st.r) walks the sheet — every block reads it, writes at it
+   and advances it, so nothing relies on how ExcelJS counts its empty rows. */
+const XLC={ink:'FF14181C',brand:'FF0C3A55',mut:'FF5F6973',line:'FFB9C2CB',soft:'FFF6F8FA',warn:'FFFDF4E4',warnL:'FFE9D3A6'};
+function xlThin(){return{style:'thin',color:{argb:XLC.line}};}
+function xlBox(){const t=xlThin();return{top:t,bottom:t,left:t,right:t};}
+function xlAmt(t){
+ const s=String(t==null?'':t).trim();
+ if(!/[0-9]/.test(s))return null;
+ const m=s.replace(/[^0-9.\-]/g,'');const n=parseFloat(m);
+ return isFinite(n)?n:null;
+}
+function xlRow(ws,st){return ws.getRow(st.r++);}
+function xlDoc(ws,doc){
+ const st={r:1};
+ for(const blk of doc.children){
+  if(blk.classList.contains('no-p'))continue;
+  if(blk.classList.contains('doc-h'))xlHead(ws,st,blk);
+  else if(blk.tagName==='TABLE'&&blk.classList.contains('itab'))xlItab(ws,st,blk);
+  else if(blk.tagName==='H4')xlSection(ws,st,blk);
+  else if(blk.classList.contains('note'))xlNote(ws,st,blk);
+  else if(blk.tagName==='TABLE')xlTable(ws,st,blk);
+  else if(blk.classList.contains('foot'))xlFoot(ws,st,blk);
+ }
+ xlWidths(ws);
+}
+function xlHead(ws,st,blk){
+ const co=blk.querySelector('.doc-co');
+ const addr=blk.querySelector('.doc-co~.sm');
+ const t=blk.querySelector('.doc-t');
+ const title=t&&t.querySelector('b')?t.querySelector('b').textContent:'';
+ const bits=t?[...t.querySelectorAll('.sm')].map(s=>s.textContent.trim()).filter(Boolean):[];
+ const r1=xlRow(ws,st);
+ ws.mergeCells(r1.number,1,r1.number,4);
+ const c=r1.getCell(1);c.value=co?co.textContent.trim():'';
+ c.font={bold:true,size:14,color:{argb:XLC.brand}};c.alignment={vertical:'top'};
+ ws.mergeCells(r1.number,6,r1.number,8);
+ const c2=r1.getCell(6);c2.value=title;c2.font={bold:true,size:12,color:{argb:XLC.brand}};
+ c2.alignment={horizontal:'right',vertical:'top'};
+ const r2=xlRow(ws,st);
+ ws.mergeCells(r2.number,1,r2.number,4);
+ const c3=r2.getCell(1);c3.value=addr?addr.textContent.trim():'';
+ c3.font={size:9,color:{argb:XLC.mut}};c3.alignment={vertical:'top',wrapText:true};
+ if(bits[0]){ws.mergeCells(r2.number,6,r2.number,8);const b1=r2.getCell(6);b1.value=bits[0];
+  b1.font={size:9,color:{argb:XLC.ink}};b1.alignment={horizontal:'right'};}
+ if(bits[1]){const r3=xlRow(ws,st);ws.mergeCells(r3.number,6,r3.number,8);
+  const b2=r3.getCell(6);b2.value=bits[1];b2.font={size:9,color:{argb:XLC.ink}};
+  b2.alignment={horizontal:'right'};}
+ st.r++; /* breathing space where the ruled header band sits on screen */
+}
+function xlPairs(td){
+ const out=[];let lab=null,val='';
+ td.childNodes.forEach(n=>{
+  if(n.nodeType===1&&n.tagName==='B'){
+   if(lab!==null||String(val).trim())out.push([lab,val]);
+   lab=n.textContent.replace(/:\s*$/,'').trim();val='';
+  }else val+=n.textContent;
+ });
+ out.push([lab,val]);
+ return out.filter(p=>(p[0]&&p[0].trim())||String(p[1]).trim());
+}
+function xlItab(ws,st,blk){
+ const box=xlBox();
+ for(const tr of blk.querySelectorAll('tr')){
+  const row=xlRow(ws,st);let c=1;
+  for(const td of tr.querySelectorAll('td')){
+   for(const [lab,val] of xlPairs(td)){
+    const lc=row.getCell(c), vc=row.getCell(c+1);
+    lc.value=lab?lab.replace(/:$/,''):'';
+    lc.font={bold:true,size:10,color:{argb:XLC.brand}};
+    lc.border=box;lc.alignment={vertical:'top'};
+    vc.value=String(val).trim();
+    vc.font={size:10,color:{argb:XLC.ink}};
+    vc.border=box;vc.alignment={vertical:'top',wrapText:true};
+    c+=2;
+   }
+  }
+ }
+ st.r++;
+}
+function xlSection(ws,st,blk){
+ const txt=blk.textContent.trim();if(!txt)return;
+ const row=xlRow(ws,st);
+ ws.mergeCells(row.number,1,row.number,8);
+ const c=row.getCell(1);c.value=txt;
+ c.font={bold:true,size:11,color:{argb:XLC.brand}};c.alignment={vertical:'middle'};
+}
+function xlNote(ws,st,blk){
+ const txt=blk.textContent.trim();
+ if(!txt)return;
+ const row=xlRow(ws,st);
+ ws.mergeCells(row.number,1,row.number,8);
+ const c=row.getCell(1);c.value=txt;
+ c.font={size:9,color:{argb:'FF8A5300'}};
+ c.alignment={wrapText:true,vertical:'top'};
+ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XLC.warn}};
+ const wl={style:'thin',color:{argb:XLC.warnL}};
+ c.border={top:wl,bottom:wl,left:wl,right:wl};
+ row.height=Math.max(16,12*Math.ceil(txt.length/110));
+ st.r++;
+}
+function xlTable(ws,st,tab){
+ const box=xlBox();
+ const visTh=[...tab.querySelectorAll('thead th')].filter(th=>!th.classList.contains('no-p'));
+ if(visTh.length){
+  const row=xlRow(ws,st);
+  visTh.forEach((th,i)=>{
+   const c=row.getCell(i+1);c.value=th.textContent.trim();
+   c.font={bold:true,size:9,color:{argb:XLC.mut}};
+   c.fill={type:'pattern',pattern:'solid',fgColor:{argb:XLC.soft}};
+   c.border=box;c.alignment={horizontal:th.classList.contains('num')?'right':'left',vertical:'middle',wrapText:true};
+  });
+ }
+ for(const tr of tab.querySelectorAll('tbody tr, tfoot tr')){
+  if(tr.classList.contains('no-p'))continue;
+  const sub=tr.classList.contains('sub-r');
+  const off=tr.classList.contains('off');
+  const tds=[...tr.querySelectorAll('td')].filter(td=>!td.classList.contains('no-p'));
+  const row=xlRow(ws,st);
+  let c=1;
+  tds.forEach(td=>{
+   const span=Math.max(1,td.colSpan||1);
+   const cell=row.getCell(c);
+   const txt=td.textContent.trim();
+   const isNum=td.classList.contains('num');
+   const amt=isNum?xlAmt(txt):null;
+   cell.value=amt!=null?amt:txt;
+   if(amt!=null)cell.numFmt='#,##0.00';
+   cell.font={bold:sub,size:10,strike:off,color:{argb:sub?XLC.brand:XLC.ink}};
+   cell.border=box;
+   cell.alignment={horizontal:isNum?'right':'left',vertical:'top',wrapText:!isNum&&span===1};
+   if(sub)cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:XLC.soft}};
+   if(span>1)ws.mergeCells(row.number,c,row.number,c+span-1);
+   c+=span;
+  });
+ }
+ st.r++;
+}
+function xlFoot(ws,st,blk){
+ const bank=blk.querySelector('.bank');
+ const gt=blk.querySelector('tr.gt');
+ const gtTds=gt?[...gt.querySelectorAll('td')]:[];
+ let n=0,gtRow=null;
+ if(bank){
+  bank.childNodes.forEach(node=>{
+   const txt=node.textContent.trim();if(!txt)return;
+   const row=xlRow(ws,st);n++;
+   if(n===2&&gtTds.length===2)gtRow=row;
+   ws.mergeCells(row.number,1,row.number,4);
+   const c=row.getCell(1);c.value=txt;
+   c.font=node.tagName==='B'?{bold:true,size:9,color:{argb:XLC.brand}}
+    :node.tagName==='I'?{italic:true,size:9,color:{argb:XLC.mut}}
+    :{size:9,color:{argb:XLC.mut}};
+   c.alignment={vertical:'top',wrapText:true};
+  });
+ }
+ if(gtTds.length===2){
+  const row=gtRow||xlRow(ws,st);
+  ws.mergeCells(row.number,6,row.number,7);
+  const lc=row.getCell(6);lc.value=gtTds[0].textContent.trim();
+  lc.font={bold:true,size:11,color:{argb:XLC.brand}};
+  lc.alignment={horizontal:'right',vertical:'middle'};
+  const vc=row.getCell(8);
+  const amt=xlAmt(gtTds[1].textContent);
+  vc.value=amt!=null?amt:gtTds[1].textContent.trim();
+  if(amt!=null)vc.numFmt='#,##0.00';
+  vc.font={bold:true,size:12,color:{argb:XLC.brand}};
+  vc.alignment={horizontal:'right',vertical:'middle'};
+  /* The ledger's double rule under the figure — the column is closed. */
+  const dbl={style:'double',color:{argb:XLC.brand}};
+  [6,7,8].forEach(ci=>{row.getCell(ci).border={bottom:dbl};});
+ }
+}
+function xlWidths(ws){
+ const w=[0,0,0,0,0,0,0,0];
+ ws.eachRow(row=>{row.eachCell({includeEmpty:false},(cell)=>{
+  const ci=cell.col;if(ci>8)return;
+  const v=String(cell.value==null?'':cell.value);
+  v.split(/\n/).forEach(part=>{w[ci-1]=Math.max(w[ci-1],part.length);});
+ });});
+ const tgt=[7,44,26,18,15,13,17,14];
+ for(let i=0;i<8;i++){
+  ws.getColumn(i+1).width=Math.min(60,Math.max(tgt[i],w[i]*1.15+2));
+ }
+}
+/* ── PDF ───────────────────────────────────────────────────────────────────── */
+async function exportPdf(){
+ if(typeof html2canvas==='undefined'||!(window.jspdf&&window.jspdf.jsPDF)){
+  toast('The PDF export needs a one-time internet connection to fetch its libraries. Reconnect and choose PDF again.','err',9000);return;}
+ if(!exportGate())return;
+ const pdas=$$('.pda');
+ if(!pdas.length){toast('Nothing to export yet — no document is rendered.','warn',6000);return;}
+ xSetBusy(true);
+ toast('Building the PDF — photographing each document at full quality…','',6000);
+ /* The photograph must come out as PAPER, whatever the screen is doing. The
+    capture measures LIVE elements, so the page itself is switched — light
+    theme, every document laid out, fit-transforms suspended — for the length
+    of the pass, and restored in the finally no matter how the build ends. */
+ const prevTheme=document.documentElement.getAttribute('data-theme');
+ const prevScroll=window.scrollY;
+ document.documentElement.setAttribute('data-theme','light');
+ document.body.classList.add('x-exporting');
+ try{
+  const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+  const PW=210,PH=297;
+  let firstPage=true;
+  for(const p of pdas){
+   const docEl=p.querySelector('.doc');if(!docEl)continue;
+   const cv=await html2canvas(docEl,{
+    scale:2,backgroundColor:'#ffffff',logging:false,
+    onclone:d=>{
+     /* Belt and braces inside the clone: strip screen-only controls and any
+        transform or animation the live pass might still carry. */
+     const st=d.createElement('style');
+     st.textContent='.no-p{display:none!important}.pda{display:block!important}'
+      +'*{transform:none!important;animation:none!important;transition:none!important}';
+     d.head.appendChild(st);
+    }});
+   const pageHpx=Math.max(1,Math.floor(cv.width*PH/PW));
+   let y=0;
+   while(y<cv.height){
+    if(!firstPage)pdf.addPage();firstPage=false;
+    const slice=document.createElement('canvas');
+    slice.width=cv.width;slice.height=Math.min(pageHpx,cv.height-y);
+    const sc=slice.getContext('2d');
+    sc.fillStyle='#ffffff';sc.fillRect(0,0,slice.width,slice.height);
+    sc.drawImage(cv,0,y,cv.width,slice.height,0,0,cv.width,slice.height);
+    pdf.addImage(slice.toDataURL('image/jpeg',0.92),'JPEG',0,0,PW,slice.height*(PW/cv.width));
+    y+=pageHpx;
+   }
+  }
+  pdf.save(exportBase()+'.pdf');
+  toast('PDF downloaded — every document of this call, one file.','ok',6000);
+ }catch(e){toast('The PDF could not be built ('+(e&&e.message||e)+').','err',9000);}
+ finally{
+  document.body.classList.remove('x-exporting');
+  if(prevTheme)document.documentElement.setAttribute('data-theme',prevTheme);
+  window.scrollTo(0,prevScroll);
+  xSetBusy(false);
+ }
 }
 /* ONE PRINT JOB, EVERY VESSEL.
    The browser's print is modal, so looping window.print() per ship is not an
