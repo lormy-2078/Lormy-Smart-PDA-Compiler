@@ -1494,6 +1494,7 @@ tr.thd td{background:var(--sunk);color:var(--ink3);font-size:10.5px;font-weight:
 .doc th.colh:hover{background:var(--accSoft)}
 .doc th.colh:active{cursor:grabbing}
 @media print{.doc th.colh{cursor:auto;background:transparent!important}}
+@media print{.doc th.colh.srt::after{content:none!important}}
 /* ── THE FIT SCALE ───────────────────────────────────────────────────────────
    --pdaScale multiplies every type size and vertical pad on the printed
    document. Default 1, set by fitDoc() after measuring. Declared on .doc so a
@@ -1653,7 +1654,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.1.0 · 04 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.2.0 · 04 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -2453,7 +2454,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.1.0';
+const VER='2.2.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -15293,8 +15294,102 @@ function xlWidths(ws){
    done in the canvas so the rasterizer can never disagree with it. A short
    document prints full-size; a long one shrinks as a whole rather than ever
    breaking onto a second sheet. */
+/* ── THE PAPER PHOTOGRAPHER ─────────────────────────────────────────────────
+   The PDF is photographed by the browser's OWN layout engine, not by a
+   re-implementation of it. The document subtree is re-homed inside an SVG
+   <foreignObject> together with a verbatim copy of the app stylesheet, the
+   lifted @media print rules and the live body classes — so column fitting,
+   flat inputs, hidden screen handles and settled margins are computed by the
+   same engine that prints, and then rasterised through an <img>. The webfonts
+   are re-embedded as data: URIs so nothing is fetched at raster time and the
+   canvas stays untaintable. html2canvas remains only as a fallback. */
+let _fontCssP=null;
+function printFontsCss(){
+ if(_fontCssP)return _fontCssP;
+ _fontCssP=(async()=>{try{
+  const spec='family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;600;700'
+    +'&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap';
+  const css=await (await fetch('https://fonts.googleapis.com/css2?'+spec)).text();
+  const blocks=css.match(/@font-face\s*{[^}]*}/g)||[];
+  let out='';
+  for(const blk of blocks){
+   const u=(blk.match(/url\((https?:[^)]+)\)/)||[])[1];
+   if(!u){out+=blk+'\n';continue;}
+   const ab=await (await fetch(u,{mode:'cors'})).arrayBuffer();
+   const u8=new Uint8Array(ab);let bin='';
+   for(let i=0;i<u8.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));
+   out+=blk.replace(/url\([^)]+\)/g,'url("data:font/woff2;base64,'+btoa(bin)+'")')+'\n';
+  }
+  return out;
+ }catch(e){return '';}})();
+ return _fontCssP;
+}
+/* Collect every rule the app writes under @media print as plain CSS.
+   NOTE: CSS nesting shipped — every CSSStyleRule now carries an (empty, but
+   truthy) .cssRules list, so branches must key off the rule TYPE, never off
+   the presence of .cssRules. */
+function liftPrintCss(){
+ let pr='';
+ const scan=(list,inside)=>{for(const r of Array.from(list||[])){
+  if(r.type===CSSRule.MEDIA_RULE)scan(r.cssRules,inside||/print/i.test(r.media.mediaText||''));
+  else if(r.type!==CSSRule.STYLE_RULE&&r.cssRules)scan(r.cssRules,inside);
+  else if(inside&&r.cssText)pr+=r.cssText+'\n';
+ }};
+ for(const ss of Array.from(document.styleSheets)){try{scan(ss.cssRules,false);}catch(e){}}
+ return pr;
+}
+async function rasterDoc(docEl){
+ const fonts=await printFontsCss();
+ const appCss=(document.querySelector('style')||{textContent:''}).textContent;
+ const lift=liftPrintCss();
+ const rc=docEl.getBoundingClientRect();
+ const W=Math.ceil(rc.width),H=Math.ceil(rc.height);
+ const clone=docEl.cloneNode(true);
+ /* Sort keys are joined with U+001F — a control character XML 1.0 forbids,
+    which would poison the SVG document. They are screen-only anyway. */
+ Array.from(clone.querySelectorAll('[data-k]')).forEach(e=>e.removeAttribute('data-k'));
+ /* Typed values are properties, not attributes — copy them across before the
+    serializer runs, or every input photographs empty. */
+ const liveCtl=Array.from(docEl.querySelectorAll('input,select,textarea'));
+ const cloneCtl=Array.from(clone.querySelectorAll('input,select,textarea'));
+ liveCtl.forEach((lv,i)=>{const c=cloneCtl[i];if(!c)return;
+  if(lv.tagName==='SELECT')Array.from(c.options).forEach(o=>{o.selected=o.value===lv.value;});
+  else c.setAttribute('value',lv.value);
+ });
+ const SER=new XMLSerializer().serializeToString(clone);
+ let svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+(W*2)+'" height="'+(H*2)
+  +'" viewBox="0 0 '+W+' '+H+'" data-theme="light">'
+  +'<style><![CDATA['+fonts+appCss+lift
+  +'.no-p{display:none!important}.pda{display:block!important}'
+  +'.doc tbody tr:nth-child(even)>td{background:#f6f8fa!important}'
+  +'.doc *{backdrop-filter:none!important;box-shadow:none!important}'
+  /* Sticky header cells rasterise piled on top of each other inside an SVG
+     foreignObject — paper never scrolls, so the header stands in flow. */
+  +'.doc thead th{position:static!important}'
+  /* The screen-only measure (380px description, elastic comments) lives under
+     @media screen, which stays TRUE in a capture and starves the Comments
+     column once the print widths switch the table to fixed layout. On paper
+     both elastic columns simply share what is left. */
+  +'.doc td.c-d,.doc th.c-d,.doc td.c-m,.doc th.c-m{width:auto!important;min-width:0!important}'
+  +'html,body{background:#fff!important;margin:0!important}'
+  +']]></style>'
+  +'<foreignObject x="0" y="0" width="'+W+'" height="'+H+'">'
+  +'<body xmlns="http://www.w3.org/1999/xhtml" class="'+document.body.className
+  +'" style="margin:0;background:#fff">'
+  +'<div class="pda on" style="display:block">'+SER+'</div>'
+  +'</body></foreignObject></svg>';
+ svg=svg.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+ const img=new Image();
+ await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error('raster decode failed'));
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});
+ const cv=document.createElement('canvas');cv.width=W*2;cv.height=H*2;
+ const cx=cv.getContext('2d');
+ cx.fillStyle='#ffffff';cx.fillRect(0,0,cv.width,cv.height);
+ cx.drawImage(img,0,0,cv.width,cv.height);
+ return cv;
+}
 async function exportPdf(){
- if(typeof html2canvas==='undefined'||!(window.jspdf&&window.jspdf.jsPDF)){
+ if(!(window.jspdf&&window.jspdf.jsPDF)){
   toast('The PDF export needs a one-time internet connection to fetch its libraries. Reconnect and choose PDF again.','err',9000);return;}
  if(!exportGate())return;
  const pdas=$$('.pda');
@@ -15323,7 +15418,8 @@ async function exportPdf(){
    document.body.classList.add('fitting');
    let cv;
    try{
-    cv=await html2canvas(docEl,{
+    try{cv=await rasterDoc(docEl);}
+    catch(rErr){cv=await html2canvas(docEl,{
      scale:2,backgroundColor:'#ffffff',logging:false,
      onclone:d=>{
       /* THE CAPTURE IS THE PAPER. The document's print stylesheet already
@@ -15334,22 +15430,18 @@ async function exportPdf(){
          photographs exactly what the printer would. External sheets (the
          font CDN) refuse cssRules access and are skipped — they carry only
          @font-face, which the clone inherits anyway. */
-      let pr='';
-      const scan=(list,inside)=>{for(const r of Array.from(list||[])){
-       if(r.media)scan(r.cssRules,inside||/print/i.test(r.media.mediaText||''));
-       else if(r.cssRules)scan(r.cssRules,inside);
-       else if(inside&&r.cssText)pr+=r.cssText+'\n';
-      }};
-      for(const ss of Array.from(d.styleSheets)){try{scan(ss.cssRules,false);}catch(e){}}
+      const pr=liftPrintCss();
       const st=d.createElement('style');
       st.textContent=pr
        +'.no-p{display:none!important}.pda{display:block!important}'
        /* Belt and braces for the rasterizer: literal colors for the zebra,
           no effects it cannot paint. */
        +'.doc tbody tr:nth-child(even)>td{background:#f6f8fa!important}'
-       +'.doc *{backdrop-filter:none!important;box-shadow:none!important}';
+       +'.doc *{backdrop-filter:none!important;box-shadow:none!important}'
+       +'.doc thead th{position:static!important}'
+       +'.doc td.c-d,.doc th.c-d,.doc td.c-m,.doc th.c-m{width:auto!important;min-width:0!important}';
       d.head.appendChild(st);
-     }});
+     }});}
    }finally{
     document.body.classList.toggle('fitting',saved.fit);
     if(saved.ps)docEl.style.setProperty('--pdaScale',saved.ps);
@@ -15361,14 +15453,18 @@ async function exportPdf(){
       and 281mm of content height (less 8mm top and bottom). Whatever does not
       fit is scaled down uniformly, so the sheet always closes on one page. */
    const PW=210,PH=297,CW=192,CH=281;
-   const pageW=cv.width, pageH=Math.round(pageW*PH/PW);
-   const contentH=Math.round(pageW*CH/CW);
-   const s=Math.min(1,contentH/cv.height);
+   /* The photograph spans CW millimetres; the sheet is PW by PH with the print
+      margins around it. Work in the photograph's own px-per-mm so the image
+      lands inside the margins instead of bleeding to the trim edge. */
+   const pxm=cv.width/CW;
+   const pageW=Math.round(PW*pxm), pageH=Math.round(PH*pxm);
+   const offX=Math.round((PW-CW)/2*pxm), offY=Math.round((PH-CH)/2*pxm);
+   const s=Math.min(1,(pageH-2*offY)/cv.height);
    const page=document.createElement('canvas');
    page.width=pageW;page.height=pageH;
    const sc=page.getContext('2d');
    sc.fillStyle='#ffffff';sc.fillRect(0,0,pageW,pageH);
-   sc.drawImage(cv,0,0,Math.round(cv.width*s),Math.round(cv.height*s));
+   sc.drawImage(cv,offX,offY,Math.round(cv.width*s),Math.round(cv.height*s));
    const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
    pdf.addImage(page.toDataURL('image/jpeg',0.95),'JPEG',0,0,PW,PH);
    const nm=pdfDocName(p,di,names);names.push(nm);
