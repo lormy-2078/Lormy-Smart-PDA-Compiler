@@ -1662,7 +1662,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.2.4 · 04 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.0 · 04 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73783,7 +73783,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.2.4';
+const VER='2.3.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -75164,7 +75164,8 @@ function paintFleet(){
   +f.list.map((g,i)=>'<button class="fl-v'+(i===f.at?' on':'')+'" onclick="fleetGo('+i+')" '
     +'title="'+esc(g.name)+' — switch to its PDA">'+esc(g.name||('Vessel '+(i+1)))
     +'<i onclick="event.stopPropagation();fleetDrop('+i+')" title="Remove this vessel">✕</i></button>').join('')
-  +'<button class="fl-all" onclick="fleetPrintAll()" title="Print every vessel\'s principal PDA in one job">Print all</button>';
+  +'<button class="fl-all" onclick="fleetPrintAll()" title="Print every vessel\'s principal PDA in one job">Print all</button>'
+  +'<button class="fl-all" onclick="fleetPdfAll()" title="Download every vessel\'s principal PDA as its own one-page PDF file">PDF all</button>';
 }
 addEventListener('visibilitychange',()=>{if(document.hidden&&dirty)writeSession();});
 addEventListener('pagehide',()=>{if(dirty)writeSession();});
@@ -86728,22 +86729,11 @@ async function rasterDoc(docEl){
  cx.drawImage(img,0,0,cv.width,cv.height);
  return cv;
 }
-async function exportPdf(){
- if(!(window.jspdf&&window.jspdf.jsPDF)){
-  toast('The PDF export needs a one-time internet connection to fetch its libraries. Reconnect and choose PDF again.','err',9000);return;}
- if(!exportGate())return;
- const pdas=$$('.pda');
- if(!pdas.length){toast('Nothing to export yet — no document is rendered.','warn',6000);return;}
- xSetBusy(true);
- toast('Building '+pdas.length+' PDF file'+(pdas.length>1?'s':'')+' — one per document, each fitted to a single A4 page…','',7000);
- const prevTheme=document.documentElement.getAttribute('data-theme');
- const prevScroll=window.scrollY;
- document.documentElement.setAttribute('data-theme','light');
- document.body.classList.add('x-exporting');
- const names=[];
- try{
-  for(let di=0;di<pdas.length;di++){
-   const p=pdas[di], docEl=p.querySelector('.doc');if(!docEl)continue;
+/* ONE DOCUMENT, ONE PAGE, ONE FILE — shared by the per-document export and
+   the fleet export, so both can never drift apart. Returns the saved file
+   name, or null when the block carries no document. */
+async function captureOnePdf(p,di,names){
+ const docEl=p.querySelector('.doc');if(!docEl)return null;
    /* Capture the NATURAL document — no fit transform, no type scale — and let
       the page geometry below do the fitting. The live fit is saved first and
       put back afterwards, so the screen returns to exactly what it showed. */
@@ -86812,10 +86802,32 @@ async function exportPdf(){
    sc.drawImage(cv,offX,offY,Math.round(cv.width*s),Math.round(cv.height*s));
    const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
    pdf.addImage(page.toDataURL('image/jpeg',0.95),'JPEG',0,0,PW,PH);
-   const nm=pdfDocName(p,di,names);names.push(nm);
+   const nm=pdfDocName(p,di,names);
    pdf.save(nm+'.pdf');
+   return nm;
    /* Consecutive programmatic downloads get swallowed by some browsers without
       a beat between them. */
+}
+
+async function exportPdf(){
+ if(!(window.jspdf&&window.jspdf.jsPDF)){
+  toast('The PDF export needs a one-time internet connection to fetch its libraries. Reconnect and choose PDF again.','err',9000);return;}
+ if(!exportGate())return;
+ const pdas=$$('.pda');
+ if(!pdas.length){toast('Nothing to export yet — no document is rendered.','warn',6000);return;}
+ xSetBusy(true);
+ toast('Building '+pdas.length+' PDF file'+(pdas.length>1?'s':'')+' — one per document, each fitted to a single A4 page…','',7000);
+ const prevTheme=document.documentElement.getAttribute('data-theme');
+ const prevScroll=window.scrollY;
+ document.documentElement.setAttribute('data-theme','light');
+ document.body.classList.add('x-exporting');
+ const names=[];
+ try{
+  for(let di=0;di<pdas.length;di++){
+   const nm=await captureOnePdf(pdas[di],di,names);
+   if(nm)names.push(nm);
+   /* Consecutive programmatic downloads get swallowed by some browsers
+      without a beat between them. */
    if(di<pdas.length-1)await new Promise(r=>setTimeout(r,450));
   }
   toast(names.length+' PDF file'+(names.length>1?'s':'')+' downloaded — one per document, one page each.','ok',7000);
@@ -86867,6 +86879,54 @@ function fleetPrintAll(){
  document.body.classList.add('fleetPrinting');
  window.print();
  setTimeout(()=>{document.body.classList.remove('fleetPrinting');box.innerHTML='';},1200);
+}
+/* THE FLEET AS FILES. The print job stacks every vessel into one browser print
+   dialog; this gives each vessel its own downloaded one-page PDF through the
+   same capture the single-document export uses, so paper and file agree.
+   The loaded vessel is restored before anything is shown, so the screen never
+   changes under the user. */
+async function fleetPdfAll(){
+ if(!fleetOn())return;
+ if(!(window.jspdf&&window.jspdf.jsPDF)){
+  toast('The PDF export needs a one-time internet connection to fetch its libraries. Reconnect and choose PDF again.','err',9000);return;}
+ if(!exportGate())return;
+ fleetSave();
+ const f=S.fleet, here=f.at, names=[], short=[];
+ f.list.forEach(g=>{
+  const keep=S.fleet;applySnap(g.snap);S.fleet=keep;
+  recalc();
+  const r=readiness();if(r.e.length)short.push((S.j.vessel||g.name)+': '+r.e.join(', '));});
+ const keep=S.fleet;applySnap(f.list[here].snap);S.fleet=keep;recalc();syncForm();
+ if(short.length&&!confirm(short.length+' of these PDAs still have missing details:\n\n• '
+   +short.join('\n• ')+'\n\nExport all anyway?'))return;
+ xSetBusy(true);
+ toast('Building '+f.list.length+' fleet PDF files — one per vessel, one page each…','',7000);
+ const prevTheme=document.documentElement.getAttribute('data-theme');
+ const prevScroll=window.scrollY;
+ const savedStep=S.step;
+ document.documentElement.setAttribute('data-theme','light');
+ document.body.classList.add('x-exporting');
+ try{
+  for(let gi=0;gi<f.list.length;gi++){
+   const keep2=S.fleet;applySnap(f.list[gi].snap);S.fleet=keep2;
+   /* Snapshots carry the step they were taken on; the documents only exist
+      on the review step, so park every vessel there while it is captured. */
+   S.step='out';recalc();
+   const p=document.querySelector('.pda[data-d="principal"]');
+   const nm=p?await captureOnePdf(p,gi,names):null;
+   if(nm)names.push(nm);
+   if(gi<f.list.length-1)await new Promise(r=>setTimeout(r,450));
+  }
+  toast(names.length+' fleet PDF file'+(names.length>1?'s':'')+' downloaded — one per vessel, one page each.','ok',7000);
+ }catch(e){toast('The fleet PDFs could not be built ('+(e&&e.message||e)+').','err',9000);}
+ finally{
+  const keep3=S.fleet;applySnap(f.list[here].snap);S.fleet=keep3;
+  S.step=savedStep;recalc();syncForm();
+  document.body.classList.remove('x-exporting');
+  if(prevTheme)document.documentElement.setAttribute('data-theme',prevTheme);
+  window.scrollTo(0,prevScroll);
+  xSetBusy(false);
+ }
 }
 addEventListener('beforeprint',()=>{document.documentElement.dataset.pt=document.documentElement.dataset.theme;setTheme('light',1);});
 addEventListener('afterprint',()=>setTheme(document.documentElement.dataset.pt||'light',1));
