@@ -142,6 +142,12 @@ a{color:var(--accInk)}
   font:600 var(--f0)/1 var(--sans);color:var(--infoInk);background:var(--infoSoft);
   border:1px solid var(--infoLine);padding:6px 11px;border-radius:999px;
   white-space:nowrap;cursor:default}
+/* BUILD STAMP. A downloaded copy of a single file never tells you by itself
+   how old it is — this does. Bump it with every published change; when a
+   "the fix isn't there" report arrives, the stamp settles in one glance
+   whether the copy being run is the copy that was pushed. */
+.buildTag{align-self:center;margin-left:8px;font:500 10.5px/1 var(--mono);
+  color:var(--ink3);white-space:nowrap;cursor:default}
 
 /* ── context bar ─────────────────────────────────────────────────────────── */
 .ctx{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:var(--s4);
@@ -1647,6 +1653,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.1.0 · 04 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -2446,7 +2453,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.0.0';
+const VER='2.1.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
