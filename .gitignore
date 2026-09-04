@@ -13,8 +13,3 @@ data/*.bak.json
 netlify_deploy/
 # Claude Code's per-machine settings: it embeds absolute local paths.
 .claude/settings.local.json
-# GPHA's published tariff, 32.5 MB. It is their copyrighted document, not this
-# project's to redistribute. The app's Source PDF viewer expects it beside
-# Smart_PDA_GeneratorV2.html — put your own copy there. Every rate and condition
-# the engine uses is already digitised in data/gpha_tariff*.json.
-GPHA_PORT_TARIFF_AUG_2023.pdf
