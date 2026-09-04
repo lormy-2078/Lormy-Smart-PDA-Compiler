@@ -7596,7 +7596,7 @@ function paintRail(){
      printer does, so columns, order, switches and overrides carry over exactly;
      the PDF is a photograph of the rendered page, one file, every document. */
   +      '<button class="rail-act" onclick="exportExcel()" title="Download every document of this call as one Excel workbook — a sheet per document">'+ico('download')+' Excel</button>'
-  +      '<button class="rail-act" onclick="exportPdf()" title="Download every document of this call as one PDF file">'+ico('file')+' PDF</button>'
+  +      '<button class="rail-act" onclick="exportPdf()" title="Download each document of this call as its own one-page PDF file">'+ico('file')+' PDF</button>'
   +      '<button class="rail-act" onclick="copySummary()" title="Copy a plain-text summary of this PDA">'+ico('copy')+' Copy</button>'
   +      '<button class="rail-act" onclick="actResetOrder()" title="Put every charge back in tariff order">↕ Order</button>'
   /* COLUMNS SITS WITH THE OTHER DOCUMENT TOOLS, NOT ABOVE THE DOCUMENT. It was a
@@ -9524,9 +9524,12 @@ function fitMeasure(doc,scale){
 function fitDoc(doc,target){
  if(!doc)return null;
  doc.style.transformOrigin='top left';
+ const wrap=doc.closest('.pda');
+ const unwrapped=w=>{if(w){w.style.height='';w.style.overflow='';}};
  let type=1, h=fitMeasure(doc,1);
  const natural=h;
  if(h<=target){doc.style.transform='';doc.style.marginBottom='';doc.style.height='';
+  unwrapped(wrap);
   return {scale:1,type:1,zoom:1,fits:true,natural,passes:0};}
  /* Stage one — type, while it stays readable. */
  let pass=0;
@@ -9537,7 +9540,10 @@ function fitDoc(doc,target){
  /* Stage two — the remainder, exactly. */
  let zoom=1;
  if(h>target){
-  zoom=target/h;
+  /* One pixel inside the page, never one over: the wrapper below is pinned to
+     the post-scale height, and a box even a fraction past the target is all a
+     paginator needs to break onto a second sheet. */
+  zoom=(target-1)/h;
   doc.style.transform='scale('+zoom+')';
   /* A transformed element still RESERVES its untransformed box in flow, so the
      page would carry an empty tail and paginate anyway. Setting height on the
@@ -9547,7 +9553,14 @@ function fitDoc(doc,target){
      alone. */
   doc.style.height='';
   doc.style.marginBottom=(-(h-h*zoom))+'px';
- }else{ doc.style.transform=''; doc.style.height=''; doc.style.marginBottom=''; }
+  /* AND PIN THE WRAPPER, BECAUSE THE PRINTER GETS THE LAST WORD. Some engines
+     paginate from the layout box even while they paint the transformed one,
+     which is how a long account still broke onto a second sheet with the fit
+     visibly applied. Giving the wrapper the post-scale height outright — and
+     clipping what no longer fits — makes the one-page footprint a fact of the
+     layout, not a painting trick the paginator may ignore. */
+  if(wrap){wrap.style.height=Math.ceil(h*zoom)+'px';wrap.style.overflow='hidden';}
+ }else{ doc.style.transform=''; doc.style.height=''; doc.style.marginBottom=''; unwrapped(wrap); }
  return {scale:type*zoom,type,zoom,fits:true,natural,passes:pass};
 }
 /* Runs against the document that is about to print. Called from the print hook
@@ -15226,7 +15239,15 @@ function xlWidths(ws){
   ws.getColumn(i+1).width=Math.min(60,Math.max(tgt[i],w[i]*1.15+2));
  }
 }
-/* ── PDF ───────────────────────────────────────────────────────────────────── */
+/* ── PDF ─────────────────────────────────────────────────────────────────────
+   ONE FILE PER DOCUMENT — the way they get sent: the principal to the owner,
+   each cargo-interest account to its receiver. Each file is exactly one A4
+   page: the document is photographed at its natural size under PRINT metrics
+   (the fitting class pins the real printed width) and then set onto the page
+   at whatever uniform scale holds it — the same geometry the paper fit uses,
+   done in the canvas so the rasterizer can never disagree with it. A short
+   document prints full-size; a long one shrinks as a whole rather than ever
+   breaking onto a second sheet. */
 async function exportPdf(){
  if(typeof html2canvas==='undefined'||!(window.jspdf&&window.jspdf.jsPDF)){
   toast('The PDF export needs a one-time internet connection to fetch its libraries. Reconnect and choose PDF again.','err',9000);return;}
@@ -15234,46 +15255,64 @@ async function exportPdf(){
  const pdas=$$('.pda');
  if(!pdas.length){toast('Nothing to export yet — no document is rendered.','warn',6000);return;}
  xSetBusy(true);
- toast('Building the PDF — photographing each document at full quality…','',6000);
- /* The photograph must come out as PAPER, whatever the screen is doing. The
-    capture measures LIVE elements, so the page itself is switched — light
-    theme, every document laid out, fit-transforms suspended — for the length
-    of the pass, and restored in the finally no matter how the build ends. */
+ toast('Building '+pdas.length+' PDF file'+(pdas.length>1?'s':'')+' — one per document, each fitted to a single A4 page…','',7000);
  const prevTheme=document.documentElement.getAttribute('data-theme');
  const prevScroll=window.scrollY;
  document.documentElement.setAttribute('data-theme','light');
  document.body.classList.add('x-exporting');
+ const names=[];
  try{
-  const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
-  const PW=210,PH=297;
-  let firstPage=true;
-  for(const p of pdas){
-   const docEl=p.querySelector('.doc');if(!docEl)continue;
-   const cv=await html2canvas(docEl,{
-    scale:2,backgroundColor:'#ffffff',logging:false,
-    onclone:d=>{
-     /* Belt and braces inside the clone: strip screen-only controls and any
-        transform or animation the live pass might still carry. */
-     const st=d.createElement('style');
-     st.textContent='.no-p{display:none!important}.pda{display:block!important}'
-      +'*{transform:none!important;animation:none!important;transition:none!important}';
-     d.head.appendChild(st);
-    }});
-   const pageHpx=Math.max(1,Math.floor(cv.width*PH/PW));
-   let y=0;
-   while(y<cv.height){
-    if(!firstPage)pdf.addPage();firstPage=false;
-    const slice=document.createElement('canvas');
-    slice.width=cv.width;slice.height=Math.min(pageHpx,cv.height-y);
-    const sc=slice.getContext('2d');
-    sc.fillStyle='#ffffff';sc.fillRect(0,0,slice.width,slice.height);
-    sc.drawImage(cv,0,y,cv.width,slice.height,0,0,cv.width,slice.height);
-    pdf.addImage(slice.toDataURL('image/jpeg',0.92),'JPEG',0,0,PW,slice.height*(PW/cv.width));
-    y+=pageHpx;
+  for(let di=0;di<pdas.length;di++){
+   const p=pdas[di], docEl=p.querySelector('.doc');if(!docEl)continue;
+   /* Capture the NATURAL document — no fit transform, no type scale — and let
+      the page geometry below do the fitting. The live fit is saved first and
+      put back afterwards, so the screen returns to exactly what it showed. */
+   const saved={
+    ps:docEl.style.getPropertyValue('--pdaScale'),
+    tf:docEl.style.transform,mb:docEl.style.marginBottom,
+    wh:p.style.height,wo:p.style.overflow,
+    fit:document.body.classList.contains('fitting')};
+   docEl.style.setProperty('--pdaScale','1');
+   docEl.style.transform='';docEl.style.marginBottom='';
+   p.style.height='';p.style.overflow='';
+   document.body.classList.add('fitting');
+   let cv;
+   try{
+    cv=await html2canvas(docEl,{
+     scale:2,backgroundColor:'#ffffff',logging:false,
+     onclone:d=>{
+      const st=d.createElement('style');
+      st.textContent='.no-p{display:none!important}.pda{display:block!important}';
+      d.head.appendChild(st);
+     }});
+   }finally{
+    document.body.classList.toggle('fitting',saved.fit);
+    if(saved.ps)docEl.style.setProperty('--pdaScale',saved.ps);
+    else docEl.style.removeProperty('--pdaScale');
+    docEl.style.transform=saved.tf;docEl.style.marginBottom=saved.mb;
+    p.style.height=saved.wh;p.style.overflow=saved.wo;
    }
+   /* PAGE GEOMETRY. The capture spans 192mm — A4 less the 9mm side margins —
+      and 281mm of content height (less 8mm top and bottom). Whatever does not
+      fit is scaled down uniformly, so the sheet always closes on one page. */
+   const PW=210,PH=297,CW=192,CH=281;
+   const pageW=cv.width, pageH=Math.round(pageW*PH/PW);
+   const contentH=Math.round(pageW*CH/CW);
+   const s=Math.min(1,contentH/cv.height);
+   const page=document.createElement('canvas');
+   page.width=pageW;page.height=pageH;
+   const sc=page.getContext('2d');
+   sc.fillStyle='#ffffff';sc.fillRect(0,0,pageW,pageH);
+   sc.drawImage(cv,0,0,Math.round(cv.width*s),Math.round(cv.height*s));
+   const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+   pdf.addImage(page.toDataURL('image/jpeg',0.95),'JPEG',0,0,PW,PH);
+   const nm=pdfDocName(p,di,names);names.push(nm);
+   pdf.save(nm+'.pdf');
+   /* Consecutive programmatic downloads get swallowed by some browsers without
+      a beat between them. */
+   if(di<pdas.length-1)await new Promise(r=>setTimeout(r,450));
   }
-  pdf.save(exportBase()+'.pdf');
-  toast('PDF downloaded — every document of this call, one file.','ok',6000);
+  toast(names.length+' PDF file'+(names.length>1?'s':'')+' downloaded — one per document, one page each.','ok',7000);
  }catch(e){toast('The PDF could not be built ('+(e&&e.message||e)+').','err',9000);}
  finally{
   document.body.classList.remove('x-exporting');
@@ -15281,6 +15320,20 @@ async function exportPdf(){
   window.scrollTo(0,prevScroll);
   xSetBusy(false);
  }
+}
+function pdfDocName(p,di,used){
+ const j=S.j, ref=String(j.ref||'').trim();
+ let s;
+ if(p.dataset.d==='principal')s=(ref||String(j.vessel||'').trim()||'Principal')+(ref?' Principal':'');
+ else{
+  const first=p.querySelector('.itab tr td');
+  const to=first?first.textContent.replace(/^To:\s*/i,'').trim():'';
+  s=docRef(Math.max(0,di-1))+' '+(to.split(/\s+/).slice(0,2).join(' ')||'Receiver');
+ }
+ s=s.replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim().slice(0,80)||'Document';
+ s='PDA_'+s;
+ let u=s,n=2;while(used.map(x=>x.toLowerCase()).includes(u.toLowerCase())){u=s+'_'+(n++);}
+ return u;
 }
 /* ONE PRINT JOB, EVERY VESSEL.
    The browser's print is modal, so looping window.print() per ship is not an

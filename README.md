@@ -42,8 +42,10 @@ Opening `Smart_PDA_GeneratorV2.html` directly in a browser works too.
    documents — every change survives recalculation and printing.
 
 Exports live beside Print on the Pro forma step bar: **Excel** (one styled worksheet per
-document, currency figures as real numbers) and **PDF** (every document photographed at
-full quality into one A4 file).
+document, currency figures as real numbers) and **PDF** (one file per document — the way
+they get sent — each fitted to exactly one A4 page, however many charges the call carries).
+Printing holds the same promise: a two-stage fit scales the type and then the sheet so a
+long account closes on one page, and the Print button's tooltip always states the scale.
 
 ## Home
 
