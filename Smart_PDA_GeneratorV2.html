@@ -636,8 +636,8 @@ body.x-exporting .doc{transform:none!important}
 .doc td input,.doc td select{background:transparent;border-color:transparent}
 .doc td input:hover,.doc td select:hover,.doc td input:focus,.doc td select:focus{
   background:var(--card);border-color:var(--line2)}
-/* THE "NEW LOOK" — every rule scoped under .pf2, applied to elements the
-   classic look already renders. Off is the default; see pfLookToggle(). */
+/* THE "NEW LOOK" — every rule scoped under .pf2. This look is now permanent
+   (always applied); the toggle that switched it was removed. */
 /* ── COLOUR ONLY WHERE IT MEANS SOMETHING ────────────────────────────────────
    The first version of this look spent colour on structure: teal pill section
    heads, a teal fill behind every sub-total, a coloured chip under all thirty
@@ -1668,7 +1668,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.2 · 04 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.3 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73789,7 +73789,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.3.2';
+const VER='2.3.3';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -78949,15 +78949,12 @@ function paintRail(){
      the PDF is a photograph of the rendered page, one file, every document. */
   +      '<button class="rail-act" onclick="exportExcel()" title="Download every document of this call as one Excel workbook — a sheet per document">'+ico('download')+' Excel</button>'
   +      '<button class="rail-act" onclick="exportPdf()" title="Download each document of this call as its own one-page PDF file">'+ico('file')+' PDF</button>'
-  +      '<button class="rail-act" onclick="copySummary()" title="Copy a plain-text summary of this PDA">'+ico('copy')+' Copy</button>'
   +      '<button class="rail-act" onclick="actResetOrder()" title="Put every charge back in tariff order">↕ Order</button>'
   /* COLUMNS SITS WITH THE OTHER DOCUMENT TOOLS, NOT ABOVE THE DOCUMENT. It was a
      permanent bar between the doc selector and the PDA, which pushed the thing
      the operator came to read halfway down the page for a control they touch
      once a quarter. Same reasoning that moved Recalculate/Save/Print here. */
   +      '<button class="rail-act'+(colBarOn?' on':'')+'" onclick="colBarToggle()" title="Add, rename or remove a column on the document">&#8862; Columns</button>'
-  +      '<button class="rail-act'+(pfLook?' on':'')+'" onclick="pfLookToggle()" title="'+(pfLook?'Switch back to the classic look — one click':'Try a refreshed look for the section headers and totals — one click to switch back')+'">'+(pfLook?'Look: new':'Try new look')+'</button>'
-  +      '<button class="rail-act" onclick="actNewPDA()" title="Start a new PDA">'+ico('plus')+' New</button>'
   +      '</span>'):'')
   +   '<span class="rail-count">Step '+(i+1)+' of '+vis.length+'</span>'
   +   (pn?'<button class="rail-nav back" data-go="'+pn.k+'" title="Back to '+esc(pn.n)+'">←</button>':'')
@@ -79045,7 +79042,6 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if
    markup can be rebuilt as often as it likes and the behaviour is in one place. */
 function actRecalc(){recalc();toast('Recalculated.','ok');}
 function actResetOrder(){S.order={};markDirty();render();toast('Charge lines returned to tariff order.','ok');}
-function actNewPDA(){if(dirty)writeSession();newJob();nav('home');toast('Pick a trade to start the new job.','',5000);}
 
 /* ── group completion dots ──────────────────────────────────────────────── */
 /* Which foldable sections the user has opened. Not persisted: a section you
@@ -81212,27 +81208,19 @@ function colSum(col,rows){
    "GHc Rate" and "Actual Amount" are not ideas the operator should have to
    re-type on every job that needs them. */
 let colBarOn=false;
-/* THE PRO FORMA "NEW LOOK" — purely a class on <body>, so switching it off is
-   never more than one click away. The user, 2026-08-28, on the expected-
-   charges mockup: "i like the font type and design -- can you upgrade the
-   pro forma page/item like that (if possible) -- leave room for reversal
-   incase it dont appear like i imagine." Nothing about the document's
-   markup, data or print layout changes — every rule lives under `.pf2` and
-   restyles the SAME elements the classic look already renders (`.doc h4`,
-   the sub-total row, the amount columns), so turning it off is a pure CSS
-   no-op rather than a code path to maintain twice. Persisted per browser so
-   a choice sticks across sessions, but a storage failure (private window,
-   blocked site data) must never crash the toggle — it just stops
-   remembering, which is a fine fallback for a look preference. */
-let pfLook=false;
-try{ pfLook=localStorage.getItem('pfLook')==='2'; }catch(e){}
+/* THE PRO FORMA LOOK — a class on <body>. It began 2026-08-28 as a trial
+   ("leave room for reversal incase it dont appear like i imagine"), shipped
+   behind a toggle, and was confirmed permanent on 2026-09-05: the classic
+   look, the toggle and its saved preference were all removed (v2.3.3).
+   Nothing about the document's markup, data or print layout changes — every
+   rule lives under `.pf2` and restyles the SAME elements the classic look
+   rendered (`.doc h4`, the sub-total row, the amount columns); with the class
+   always on it is simply the look now. */
+/* THE REFRESHED LOOK IS THE ONLY LOOK NOW — the classic face and its toggle
+   left together; every saved preference for it is deliberately ignored. */
+let pfLook=true;
 function pfLookSync(){
- try{ document.body.classList.toggle('pf2',pfLook); }catch(e){}
-}
-function pfLookToggle(){
- pfLook=!pfLook;
- try{ localStorage.setItem('pfLook',pfLook?'2':'1'); }catch(e){}
- pfLookSync(); render();
+ try{ document.body.classList.add('pf2'); }catch(e){}
 }
 /* The option list the MOST RECENT paintColBar() render built, in the exact
    order its <select> printed them — read back by position rather than by
@@ -86313,32 +86301,6 @@ function runExample(k){
 }
 
 /* ════════════════ COPY · PRINT · BACKUP ════════════════════════════════════ */
-function copySummary(){
- if(!S.lines.length){toast('Build the PDA first — there is nothing to summarise.','err');return;}
- const j=S.j,L=[];
- L.push('PROVISIONAL DISBURSEMENT ACCOUNT — '+(j.ref||''));
- L.push('Vessel: '+(j.vessel||'TBN')+'   Type: '+j.vtype+'   GRT: '+j.grt+'   LOA: '+j.loa+' m');
- L.push('Port: '+j.port+'   ETA: '+(j.eta||'TBA')+'   Prov. stay: '+(j.stay||'—')+' days');
- if(j.com)L.push('Cargo: '+j.com+(num(j.qty)>0?(' — '+nq(j.qty)+' MT'):''));
- if(j.liner)L.push('Liner terms: '+j.liner);
- L.push('');
- let p=0;
- [['ship','SHIP RELATED'],['cargo','CARGO RELATED'],['others','OTHERS / GENERAL']].forEach(([k,t])=>{
-  const rows=S.lines.filter(i=>!i.off&&i.payer==='principal'&&i.sec===k);
-  if(!rows.length)return;
-  L.push(t);
-  rows.forEach(i=>{p+=i.amt;L.push('  '+String(i.d).slice(0,52).padEnd(54,' ')+fmt(i.amt).padStart(14,' '));});
-  L.push('');});
- L.push('GRAND TOTAL — PRINCIPAL'.padEnd(54,' ')+fmt(p).padStart(14,' '));
- const r=S.lines.filter(i=>!i.off&&i.payer==='receiver').reduce((s,i)=>s+i.amt,0);
- if(r>0)L.push((party().one.toUpperCase()+' ACCOUNT').padEnd(54,' ')+fmt(r).padStart(14,' '));
- L.push('');L.push('Prepared with Automated PDA Generator — subject to review before issue.');
- const txt=L.join('\n');
- (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject())
-  .then(()=>toast('Summary copied — paste it straight into your email.','ok'))
-  .catch(()=>{const ta=el('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
-   document.execCommand('copy');ta.remove();toast('Summary copied.','ok');});
-}
 function printDoc(){
  const r=readiness();
  if(r.e.length&&!confirm('This PDA still has missing details:\n\n• '+r.e.join('\n• ')+'\n\nPrint anyway?'))return;
@@ -86994,7 +86956,6 @@ function cmdSource(){
   add('Do','Recalculate',MK+'↵','refresh',()=>{recalc();toast('Recalculated.','ok');});
   add('Do','Save to library',MK+'S','save',()=>saveJob());
   add('Do','Print the document on screen',MK+'P','print',printDoc);
-  add('Do','Copy a plain-text summary','for pasting into an email','copy',copySummary);
   add('Do','Reset the charge-line order','back to tariff order','refresh',()=>{S.order={};render();toast('Line order reset.','ok');});
  }
  /* The command palette is the by-hand route with a profile pre-filled — it stays
