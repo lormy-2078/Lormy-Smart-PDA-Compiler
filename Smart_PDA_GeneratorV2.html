@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.5 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.6 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73791,7 +73791,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.3.5';
+const VER='2.3.6';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74223,6 +74223,7 @@ const VEH={
    the way stevedoring gets one. Summed across all classes into one line,
    matching how the issued PDA that seeded this printed it. */
 const VEH_OT={r:2.65,c:'3L1019'};
+const VEH_SHORE_OT={r:1.89};
 function billVehicles(dir,liner,payer){
  if(!isCargo())return;
  const cls=[['saloon',S.j.vehSaloon],['mini',S.j.vehMini],['utility',S.j.vehUtility],['trailer',S.j.vehTrailer]]
@@ -74255,12 +74256,21 @@ function billVehicles(dir,liner,payer){
    rate:piddRate,unit:'Per unit',qty:n,amt:r2(piddRate*n),payer});
   const stevRate=driveable?v.stevD:v.stevN, stevCode=driveable?v.stevDC:v.stevNC;
   add({sec:'cargo',code:stevCode,tag:'veh-'+k,d:'Stevedoring — '+v.n,
-   cmt:(driveable?'Driveable':'Non-driveable')+' [Third Schedule F]'+(S.j.vehDriveable?'':' — not confirmed, priced as driveable'),
+   cmt:(driveable?'Driveable':'Non-driveable')+' [Third Schedule F]'+(S.j.vehDriveable?'':' — not confirmed, priced as driveable; the issued TEM26059 billed the non-driveable column, so confirm per call'),
    rate:stevRate,unit:'Per unit',qty:n,amt:r2(stevRate*n),payer,pending:!S.j.vehDriveable});
  });
- if(totalUnits>0)
+ if(totalUnits>0){
   add({sec:'cargo',code:VEH_OT.c,d:'Stevedoring Labour Overtime — Unpacked Vehicles',
    rate:VEH_OT.r,unit:'Per unit',qty:totalUnits,amt:r2(VEH_OT.r*totalUnits),payer});
+  /* SHORE-HANDLING O'TIME ON VEHICLES mirrors the stevedoring O'Time the same
+     way the bagged cargo shore gang does: a local practice line, not a printed
+     GPHA row — Third Schedule L.1d carries only the 2.65 stevedoring figure,
+     yet the issued TEM26059 (MV FLORIDA HIGHWAY) bills 1.89 per unit beside it.
+     Kept on the same payer as the stevedoring O'Time so the two never split. */
+  add({sec:'cargo',code:'-',d:"Shore Handling Labour O'time — Unpacked Vehicles",
+   cmt:'Local practice, distinct from GPHA stevedoring O\u2019time [TEM26059]',
+   rate:VEH_SHORE_OT.r,unit:'Per unit',qty:totalUnits,amt:r2(VEH_SHORE_OT.r*totalUnits),payer});
+ }
 }
 
 /* Containers — every rate is [20', 40', 45'] exactly as printed */
