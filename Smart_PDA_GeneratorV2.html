@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.0 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.1 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73798,7 +73798,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.4.0';
+const VER='2.4.1';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74244,6 +74244,7 @@ const VEH={
    matching how the issued PDA that seeded this printed it. */
 const VEH_OT={r:2.65,c:'3L1019'};
 const VEH_SHORE_OT={r:1.89};
+const vehUnits=()=>num(S.j.vehSaloon)+num(S.j.vehMini)+num(S.j.vehUtility)+num(S.j.vehTrailer);
 function billVehicles(dir,liner,payer){
  if(!isCargo())return;
  const cls=[['saloon',S.j.vehSaloon],['mini',S.j.vehMini],['utility',S.j.vehUtility],['trailer',S.j.vehTrailer]]
@@ -78111,14 +78112,18 @@ function cargoScenarioPrincipal(list){
    same `cargoBearer()`/liner-terms logic the real pro forma uses. */
 let EXP_SIG=null, EXP_CACHE=null;
 function expectedCharges(){
- if(!isCargo()||!S.j.cat||!S.j.com||!S.j.dir||!S.j.liner)return null;
+ /* A RoRo call may carry NO commodity at all — only units — so the commodity
+    gate opens for vehicle calls too; the preview then lists the ship lines and
+    the vehicle quintet off the same engine that prices them for real. */
+ const veh=vehUnits()>0;
+ if(!isCargo()||!S.j.cat||(!S.j.com&&!veh)||!S.j.dir||!S.j.liner)return null;
  /* Once real numbers exist the real pro forma is the ground truth, not this
     — it steps aside rather than sit beside a document saying the same
     thing with invented figures. */
  const hasReal=num(S.j.grt)>0&&num(S.j.loa)>0
-   &&(S.cargo.length||num(S.j.qty)>0||(S.ctr||[]).some(l=>num(l.n)>0));
+   &&(S.cargo.length||num(S.j.qty)>0||(S.ctr||[]).some(l=>num(l.n)>0)||veh);
  if(hasReal)return null;
- const sig=[S.j.cat,S.j.com,S.j.dir,S.j.liner,S.j.port,S.j.callType,S.j.oilGas].join('');
+ const sig=[S.j.cat,S.j.com,S.j.dir,S.j.liner,S.j.port,S.j.callType,S.j.oilGas,vehUnits()].join('');
  if(sig===EXP_SIG)return EXP_CACHE;
  const saveJ=JSON.parse(JSON.stringify(S.j)), saveLines=S.lines, saveCargo=S.cargo, saveCtr=S.ctr;
  let out=null;
@@ -78130,7 +78135,7 @@ function expectedCharges(){
        (see the map below), it only has to make billCtrGSA()'s num(l.t)>0
        gate pass so the GSA line shows up as a line the call will carry. */
     S.ctr=[{id:'x',size:'20',physSize:'20',cls:'gen',mv:S.j.dir||'Import',n:1,teu:1,t:1,rcv:''}];
-  }else{
+  }else if(S.j.com||!veh){
    S.j.qty=num(S.j.qty)||1;
   }
   compute();

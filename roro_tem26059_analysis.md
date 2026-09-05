@@ -143,3 +143,13 @@ A call with vehicles now raises the full likely account:
   609.75 implies a 662.77 base that is NOT in the Aug-2023 book — likely a
   post-2023 revision. Book stays controlling until an updated tariff lands.
 - GSA: no vehicle row in the GSA schedule; vehicles excluded per the sheet.
+
+## v2.4.1 — expected-charges preview is vehicle-aware
+
+The Expected Charges feature (the "see the charges like your Excel before any
+entry" preview) required a commodity and therefore showed NOTHING for a
+vehicles-only RoRo call. Now the commodity gate opens when units are entered,
+the placeholder probe no longer invents a conventional tonne for unit-only
+calls, and the preview lists the ship lines, the vehicle quintet + both
+overtime twins, and the flagged practice lines, grouped per PDA exactly as the
+real compute() assigns them. Steps aside as before once real figures exist.
