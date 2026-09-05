@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.6 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.7 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73791,7 +73791,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.3.6';
+const VER='2.3.7';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74207,17 +74207,30 @@ const bagStev=(d,cl,lf,mode)=>{const t=BAGST[hDir(d)]||BAGST.Import,e=t[cl]||t.G
    Re-exports, Transhipment and Transit traffic"].
    pidd: piddTsFactor(dir) still applies — PIDD halves on transhipment only,
    never on transit [1K3, same asymmetry as every other PIDD row in this file].
-   stevD/stevN: driveable / non-driveable [3F1/3F2 — identical rates on import
-   and export, so one pair covers both directions]. */
+   st: stevedoring rows per direction — F.1 Import, F.2 Export, F.5 Transhipment,
+   F.7 Transit Inbound, F.8 Transit Outbound. Driveable and non-driveable are two
+   columns of ONE printed row, so both columns share the row's code (the old
+   table pointed the non-driveable rate at the export row because import/export
+   rates happen to be equal — a wrong citation with a right figure). The
+   transhipment row covers BOTH movements, charged to the inbound vessel only
+   [3F5 note]; rates are for Ro-Ro operations, Lo-Lo lifts add 25% [3F1 note]. */
 const VEH={
  saloon:{n:'Saloon Cars/Estates',pdI:33.39,pdIC:'1B6001',pdE:32.41,pdEC:'1B12001',
-   isps:5.25,ispsC:'1J3001',pidd:4.00,piddC:'1K3001',stevD:60.48,stevDC:'3F1001',stevN:75.60,stevNC:'3F2001'},
+   isps:5.25,ispsC:'1J3001',pidd:4.00,piddC:'1K3001',
+   st:{imp:{c:'3F1001',D:60.48,N:75.60},exp:{c:'3F2001',D:60.48,N:75.60},
+       tshp:{c:'3F5001',D:36.54,N:45.99},tin:{c:'3F6001',D:45.99,N:56.70},tout:{c:'3F7001',D:45.99,N:56.70}}},
  mini:{n:'Mini Vehicles',pdI:74.34,pdIC:'1B6002',pdE:72.16,pdEC:'1B12002',
-   isps:10.50,ispsC:'1J3002',pidd:7.00,piddC:'1K3002',stevD:120.33,stevDC:'3F1002',stevN:149.94,stevNC:'3F2002'},
+   isps:10.50,ispsC:'1J3002',pidd:7.00,piddC:'1K3002',
+   st:{imp:{c:'3F1002',D:120.33,N:149.94},exp:{c:'3F2002',D:120.33,N:149.94},
+       tshp:{c:'3F5002',D:72.45,N:90.09},tin:{c:'3F6002',D:90.09,N:112.77},tout:{c:'3F7002',D:90.09,N:112.77}}},
  utility:{n:'Utility Vehicles',pdI:103.32,pdIC:'1B6003',pdE:100.29,pdEC:'1B12003',
-   isps:15.75,ispsC:'1J3003',pidd:11.00,piddC:'1K3003',stevD:188.38,stevDC:'3F1003',stevN:235.00,stevNC:'3F2003'},
+   isps:15.75,ispsC:'1J3003',pidd:11.00,piddC:'1K3003',
+   st:{imp:{c:'3F1003',D:188.38,N:235.00},exp:{c:'3F2003',D:188.38,N:235.00},
+       tshp:{c:'3F5003',D:112.77,N:141.12},tin:{c:'3F6003',D:141.12,N:176.41},tout:{c:'3F7003',D:141.12,N:176.41}}},
  trailer:{n:'Trailer Units',pdI:103.32,pdIC:'1B6004',pdE:100.29,pdEC:'1B12004',
-   isps:15.75,ispsC:'1J3004',pidd:11.00,piddC:'1K3004',stevD:188.38,stevDC:'3F1004',stevN:235.00,stevNC:'3F2004'}};
+   isps:15.75,ispsC:'1J3004',pidd:11.00,piddC:'1K3004',
+   st:{imp:{c:'3F1004',D:188.38,N:235.00},exp:{c:'3F2004',D:188.38,N:235.00},
+       tshp:{c:'3F5004',D:112.77,N:141.12},tin:{c:'3F6004',D:141.12,N:176.41},tout:{c:'3F7004',D:141.12,N:176.41}}}};
 /* One overtime rate for every class [3L1019 "Unpacked Vehicle (Direct/
    Indirect)"] — the tariff prints a single figure here, not a per-class table
    the way stevedoring gets one. Summed across all classes into one line,
@@ -74254,9 +74267,16 @@ function billVehicles(dir,liner,payer){
   add({sec:'cargo',code:v.piddC,tag:'veh-'+k,d:'Port Infrastructure Development Dues (PIDD) ('+v.n+')',
    cmt:piF<1?'transhipment at 50% [First Schedule K.3 note]':'',
    rate:piddRate,unit:'Per unit',qty:n,amt:r2(piddRate*n),payer});
-  const stevRate=driveable?v.stevD:v.stevN, stevCode=driveable?v.stevDC:v.stevNC;
-  add({sec:'cargo',code:stevCode,tag:'veh-'+k,d:'Stevedoring — '+v.n,
-   cmt:(driveable?'Driveable':'Non-driveable')+' [Third Schedule F]'+(S.j.vehDriveable?'':' — not confirmed, priced as driveable; the issued TEM26059 billed the non-driveable column, so confirm per call'),
+  /* One printed row per direction; driveable/non-driveable are its two columns,
+     so the code never changes with the driveable answer — only the rate does. */
+  const sk={Import:'imp',Export:'exp',Transhipment:'tshp',Transit:'tin','Transit Outbound':'tout'}[dir]||'imp';
+  const stv=v.st[sk], lolo=S.j.vtype&&S.j.vtype!=='RoRo';
+  const stevRate=r2((driveable?stv.D:stv.N)*(lolo?1.25:1));
+  add({sec:'cargo',code:stv.c,tag:'veh-'+k,d:'Stevedoring — '+v.n,
+   cmt:(driveable?'Driveable':'Non-driveable')+' [Third Schedule F.'+({imp:'1',exp:'2',tshp:'5',tin:'7',tout:'8'}[sk])+']'
+    +(lolo?' — Lo-Lo operation +25% [F note]':'')
+    +(sk==='tshp'?' — rate covers both movements, inbound vessel only':'')
+    +(S.j.vehDriveable?'':' — not confirmed, priced as driveable; the issued TEM26059 billed the non-driveable column, so confirm per call'),
    rate:stevRate,unit:'Per unit',qty:n,amt:r2(stevRate*n),payer,pending:!S.j.vehDriveable});
  });
  if(totalUnits>0){
