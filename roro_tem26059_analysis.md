@@ -89,3 +89,22 @@ principal paid. Needs the user's reading.
   tariff footing (L.2 bills per man-hour; no call-fee/tally row exists) — agent-side
   provisions the operator adds by hand where practice wants them.
 - **Trailer PIDD stays 11.00** per the tariff; the sheet's $12.00 is its own quirk.
+
+## Direction path audit (v2.3.7)
+
+Third Schedule F prints a dedicated row per direction: F.1 Import, F.2 Export,
+F.5 Transhipment, F.7 Transit Inbound, F.8 Transit Outbound. The engine now bills
+each direction off its own row (old code reused the import/export rows and pointed
+non-driveable rates at the export row's code). Verified matrix, one driveable mini:
+
+| Direction | Port dues | PIDD | Stevedoring |
+|---|---|---|---|
+| Import | 74.34 (1B6) | 7.00 | 3F1 120.33 |
+| Export | 72.16 (1B12) | 7.00 | 3F2 120.33 |
+| Transhipment | 44.60 (60%) | 3.50 (50%) | 3F5 72.45 (both movements, inbound vessel) |
+| Transit Inbound | 44.60 (60%) | 7.00 (full) | 3F6 90.09 |
+| Transit Outbound | 43.30 (60% of export) | 7.00 | 3F7 90.09 |
+
+Lo-Lo rule [3F note]: rates are for Ro-Ro operations; a non-RoRo vessel lifts at
++25% (120.33 → 150.41), applied only when the vessel type is stated and not RoRo.
+ISPS stays flat in every direction; 3L1019 + the 1.89 shore twin stay per unit.
