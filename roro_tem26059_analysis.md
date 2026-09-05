@@ -108,3 +108,19 @@ non-driveable rates at the export row's code). Verified matrix, one driveable mi
 Lo-Lo rule [3F note]: rates are for Ro-Ro operations; a non-RoRo vessel lifts at
 +25% (120.33 → 150.41), applied only when the vessel type is stated and not RoRo.
 ISPS stays flat in every direction; 3L1019 + the 1.89 shore twin stay per unit.
+
+## v2.3.8 — shore O/T resourced; Q(57) edge statuses parked with guidance
+
+- The $1.89 shore-handling O/T is NOT local practice: Fourth Schedule H.1 prints it —
+  4H1009/4H1010 "Unpacked Vehicle — Direct/Indirect Delivery", 1.89/unit either
+  column. Line now cites 4H1009; the "local practice" label is withdrawn.
+- Intake panel now carries a Q(57) routing note: machinery/equipment = conventional
+  (cargo lines, not counts); devanned vehicles = no THC but Transfer & Storage at
+  unpacked-vehicle rates; craned units carry 3H4; stuffed vehicles' cargo is a
+  separate conventional stream.
+- Event-driven vehicle surfaces PARKED (manual lines until an issued PDA prices
+  them): THC 4B1xxx (GH¢, driveable split), Transfer Port⇄Safebond 4B2/4B3,
+  Inter-terminal/devanned 4B4, devanned-within-ICD 4D13001-4, fixing/tyres/fueling
+  4D13006-14, Storage 4G3xxx (7 days free, banded GH¢), Craneage 3H4xxx,
+  motor bikes 3I3xxx, national/regional regime 10A3/10A8/10A9/10C3.
+- RoRo tile confirmed present: {id:'roro', set:{callType:'cargo',vtype:'RoRo',cat:'genBreakbulk'}}.

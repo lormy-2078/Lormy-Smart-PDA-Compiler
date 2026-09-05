@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.7 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.8 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1895,6 +1895,13 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
           <input data-f="vehTrailer" type="number" min="0" step="1" placeholder="0"></div>
         <div data-only="roro"><label class="f">Vehicles driveable? <span class="hint">?<span class="tip">Doubles the stevedoring rate when they are not — a vehicle that must be lifted or towed off costs the non-driveable rate [Third Schedule F]. Read off the manifest or ask the ship; never assumed from the vessel type.</span></span></label>
           <select data-f="vehDriveable"><option value="">— not stated —</option><option value="yes">Driveable — drives off under its own power</option><option value="no">Non-driveable — lifted or towed</option></select></div>
+        <!-- Q(57)'s edge statuses, kept beside the counts so a manifest that
+             mentions machinery, stuffed or devanned units is routed correctly
+             instead of being squeezed into the four classes. The event-driven
+             tariff rows they open (THC 4B1, transfers 4B2–4B4, devanned services
+             4D13, storage 4G3, craneage 3H4) stay manual lines until an issued
+             PDA prices them — see roro_tem26059_analysis.md. -->
+        <div data-only="roro" class="gnote"><b>Not everything on wheels is a vehicle here.</b> Machinery and equipment are treated as <b>conventional cargo</b> — enter them on the cargo lines, not in these counts [Q(57)]. <b>Devanned (containerised) vehicles</b> attract no THC after devanning but do attract Transfer and Storage at unpacked-vehicle rates [Q(57)]. A unit that must be <b>craned</b> carries a craneage line [3H4] — add it by hand when the terminal lifts. <b>Stuffed vehicles</b> carry their cargo as a separate conventional stream.</div>
         <div data-only="dryBulk"><label class="f">Handling method (dry bulk) <span class="hint">?<span class="tip" id="handNote"></span></span></label>
           <select data-f="handling"><option value="grabbing">Grabbing</option><option value="conveyor">Conveyor / continuous</option>
             <option value="hopper">GPHA's own equipment</option><option value="bleeding">Bleeding (semi-bulk)</option>
@@ -73791,7 +73798,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.3.7';
+const VER='2.3.8';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74282,13 +74289,13 @@ function billVehicles(dir,liner,payer){
  if(totalUnits>0){
   add({sec:'cargo',code:VEH_OT.c,d:'Stevedoring Labour Overtime — Unpacked Vehicles',
    rate:VEH_OT.r,unit:'Per unit',qty:totalUnits,amt:r2(VEH_OT.r*totalUnits),payer});
-  /* SHORE-HANDLING O'TIME ON VEHICLES mirrors the stevedoring O'Time the same
-     way the bagged cargo shore gang does: a local practice line, not a printed
-     GPHA row — Third Schedule L.1d carries only the 2.65 stevedoring figure,
-     yet the issued TEM26059 (MV FLORIDA HIGHWAY) bills 1.89 per unit beside it.
-     Kept on the same payer as the stevedoring O'Time so the two never split. */
-  add({sec:'cargo',code:'-',d:"Shore Handling Labour O'time — Unpacked Vehicles",
-   cmt:'Local practice, distinct from GPHA stevedoring O\u2019time [TEM26059]',
+  /* SHORE-HANDLING O'TIME ON VEHICLES mirrors the stevedoring O'Time on the
+     shore gang. First parked as "local practice" off TEM26059; the Fourth
+     Schedule then supplied the printed home: H.1 Labour Overtime — Ship
+     Related Shore Operations, 4H1009/4H1010 "Unpacked Vehicle — Direct /
+     Indirect Delivery" at 1.89 per unit, same figure either column. */
+  add({sec:'cargo',code:'4H1009',d:"Shore Handling Labour O'time — Unpacked Vehicles",
+   cmt:'ship-related shore operations [4H1009/4H1010]',
    rate:VEH_SHORE_OT.r,unit:'Per unit',qty:totalUnits,amt:r2(VEH_SHORE_OT.r*totalUnits),payer});
  }
 }
