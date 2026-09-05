@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.5.0 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.6.0 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1801,6 +1801,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
         <div><label class="f">Cargo document text — optional</label><textarea id="txC" rows="4" placeholder="Paste cargo document text here instead of uploading a file"></textarea></div>
         <div data-only="notDryBulk"><label class="f">Packing list text — optional</label><textarea id="txP" rows="4" placeholder="Paste packing list text here instead of uploading a file"></textarea></div>
       </div>
+      <div class="note" id="xdoc" style="display:none;margin-top:var(--s4)"></div>
       <div id="prev" class="row" style="margin-top:var(--s3)"></div>
       <details style="margin-top:var(--s3)"><summary class="sm" style="cursor:pointer">Troubleshooting details</summary>
         <pre id="dbg" style="background:var(--sunk);color:var(--ink);border-radius:var(--r1);padding:12px;
@@ -73798,7 +73799,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.5.0';
+const VER='2.6.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74976,7 +74977,7 @@ const F0={reqType:'',port:'Takoradi',ref:'',callType:'cargo',oilGas:'no',
  vessel:'',imo:'',flag:'',vtype:'',grt:'',loa:'',draft:'',sailDraft:'',eta:'',prevPort:'',berth:'',
  geared:'',                       // '' unknown · 'yes' own gear · 'no' gearless, needs a shore crane
  vesselTrade:'deepSea',anchorageOnly:'no',paxWorked:'yes',paxCount:'',
- dir:'',cat:'',com:'',qty:'',stay:'',dischRate:'',liner:'',handling:'grabbing',liquidMethod:'pipeline',
+ dir:'',cat:'',com:'',qty:'',apptQty:'',stay:'',dischRate:'',liner:'',handling:'grabbing',liquidMethod:'pipeline',
  comAmb:null,comRaw:'',
  fireHrs:'',fireKind:'oil',stevRate:'',stevCcy:'EUR',stevFx:'',
  bagMode:'Direct',bagLift:'5',bagDG:'DangerousI',bagCrane:'no',bagCraneN:1,bagSurvey:'no',
@@ -78760,7 +78761,7 @@ function render(){
  fillDynamic();
  paintRail();paintGroups();paintColBar();paintFitBar();paintCargo();paintCtr();paintCtrSvc();paintOff();paintOG();
  paintPacking();paintDocs();paintBreak();paintReady();paintAsks();paintAskLock();paintPkLock();paintCtx();
- paintLiner();paintCirc();paintScope();paintBasis();paintCross();paintRcv();
+ paintLiner();paintCirc();paintScope();paintBasis();paintCross();paintXDoc();paintRcv();
  paintBench();paintOgVis();paintFleet();paintDetected();paintExpChg();paintFrozen();
  autoAdvance();
 }
@@ -79516,6 +79517,42 @@ function paintCross(){
   +c.conflicts.slice(0,8).map(x=>'<div style="margin-top:5px">Line '+(x.row+1)+' · <b>'+esc(x.field)+'</b> — full page read <i>'
    +esc(String(x.page).slice(0,44))+'</i>, close-up read <b>'+esc(String(x.close).slice(0,44))+'</b>. <span class="sm">Kept the close-up.</span></div>').join('')
   +(c.conflicts.length>8?'<div class="sm">…and '+(c.conflicts.length-8)+' more.</div>':'');
+}
+/* ── CROSS-DOCUMENT CHECKS — the documents read against one another ──────
+   Deterministic arithmetic over what each document already gave the job:
+   the quantity the appointment letter booked, what the Bills of Lading
+   total, what the packing list totals. Nothing here needs the AI — the
+   figures are already on the workspace, so the panel can recompute on
+   every render and can never argue with the tariff. A difference under 1%
+   agrees (letters round; packing lists weigh); beyond that the documents
+   disagree and the mismatch is named. */
+function paintXDoc(){
+ const e=$('#xdoc');if(!e)return;
+ const rows=[];
+ const norm=n=>String(n||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+ const apq=num(S.j.apptQty);
+ const blT=r2(S.cargo.reduce((s,c)=>s+num(c.qty),0));
+ const pk=S.pkgDoc&&S.pkgDoc.tot?S.pkgDoc.tot:null;
+ const pkW=pk?r2(pk.t):0;
+ const cmp=(label,a,an,b,bn)=>{
+  if(!(a>0)||!(b>0))return;
+  const pct=Math.abs(a-b)/Math.max(a,b)*100;
+  rows.push({ok:pct<=1,txt:label+' — '+an+' <b>'+nq(r2(a))+' MT</b> vs '+bn+' <b>'+nq(r2(b))+' MT</b>'
+   +(pct<=1?'':' · difference '+nq(r2(pct))+'%')});};
+ if(apq>0&&blT>0)cmp('Appointment vs cargo documents',apq,'the letter books',blT,'the cargo documents total');
+ if(apq>0&&pkW>0)cmp('Appointment vs packing list',apq,'the letter books',pkW,'the packing list totals');
+ if(blT>0&&pkW>0)cmp('Cargo documents vs packing list',blT,'the cargo documents total',pkW,'the packing list totals');
+ const rcvs=[...new Set(S.cargo.map(c=>norm(c.rcv)).filter(Boolean))];
+ const rj=norm(S.j.rName);
+ if(rcvs.length&&rj&&!rcvs.some(x=>x===rj||(x.length>4&&rj.length>4&&(x.indexOf(rj)===0||rj.indexOf(x)===0)))){
+  rows.push({ok:false,txt:'The job names <b>'+esc(S.j.rName)+'</b> as receiver; the cargo documents name a different consignee — confirm which name the PDA should carry.'});
+ }
+ if(!rows.length){e.style.display='none';e.innerHTML='';return;}
+ const bad=rows.some(x=>!x.ok);
+ e.style.display='';e.className='note '+(bad?'warn':'ok');
+ e.innerHTML='<b>Cross-document check</b> <span class="sm">— where the documents overlap, '+
+  (bad?'they do not all agree:':'they agree.')+'</span>'
+  +rows.map(x=>'<div style="margin-top:5px">'+(x.ok?'✓':'⚠')+' '+x.txt+'</div>').join('');
 }
 
 /* ── container tables ───────────────────────────────────────────────────── */
@@ -85080,6 +85117,11 @@ async function extractAppt(){
      letter that gives both a stay and a rate is telling you the rate is the
      basis for it. */
   deriveStay();
+  /* WHAT THE LETTER SAID THE CARGO WEIGHS — frozen here, because a packing-list
+     read overwrites the quantity with its own total later. The cross-document
+     check compares the letter's figure with what the Bills of Lading and the
+     packing list actually total. */
+  if(num(S.j.qty)>0)S.j.apptQty=num(S.j.qty);
   applyGeared();      // a gearless ship needs a shore crane; switch it on before pricing
   if(!S.man.req&&!S.j.reqType){S.j.reqType='Appointment';newRefIfNeeded();}
   /* SEVERAL SHIPS ON ONE ENQUIRY → SEVERAL PDAs.
@@ -87175,43 +87217,79 @@ addEventListener('keydown',e=>{
    silently. The question stays a question: intelligence proposes, the agent
    disposes. On dry bulk the packing lane stands down, so nothing is probed. */
 async function looksLikePacking(f){
- if(/\bpack(?:ing)?[\s_\-]?list\b/i.test(f.name))return true;
+ const t=await probeDocText(f);
+ if(t===false)return false;
+ if(t===null)return /\bpack(?:ing)?[\s_\-]?list\b/i.test(f.name);
+ if(/\bpacking\s*list\b/i.test(t)){
+  const sig=['gross\\s*(?:wt|weight)','net\\s*(?:wt|weight)','cbm|cubic','dimension|measurement',
+   'carton|package|pallet|drum|crate|bundle'].filter(r=>new RegExp(r,'i').test(t)).length;
+  if(sig>=2)return true;}
+ return /\bpack(?:ing)?[\s_\-]?list\b/i.test(f.name);
+}
+/* ONE PROBE, EVERY CLASSIFIER. Reads just enough of the file to classify it —
+   the first two PDF pages, the head of a text file, the sheet names and first
+   rows of a workbook — and hands the text to whichever question is being
+   asked. `null` means "not cheaply readable" (images, Word) and `false` a
+   read failure; callers fall back to the filename on both. */
+async function probeDocText(f){
  const ext=(f.name.split('.').pop()||'').toLowerCase();
- let txt='';
  try{
   if(ext==='pdf'&&window.pdfjsLib){
    const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+   let txt='';
    for(let p=1;p<=Math.min(2,pdf.numPages);p++){
     txt+=(await (await pdf.getPage(p)).getTextContent()).items.map(i=>i.str).join(' ')+'\n';}
-  }else if(ext==='txt'||ext==='csv'){txt=(await f.text()).slice(0,16000);}
-  else if((ext==='xlsx'||ext==='xls')&&window.XLSX){
+   return txt;
+  }
+  if(ext==='txt'||ext==='csv')return (await f.text()).slice(0,16000);
+  if((ext==='xlsx'||ext==='xls')&&window.XLSX){
    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
-   txt=wb.SheetNames.join(' ')+'\n'+wb.SheetNames.map(n=>XLSX.utils.sheet_to_csv(wb.Sheets[n]).slice(0,5000)).join('\n');
-  }else return false;
+   return wb.SheetNames.join(' ')+'\n'+wb.SheetNames.map(n=>XLSX.utils.sheet_to_csv(wb.Sheets[n]).slice(0,5000)).join('\n');
+  }
+  return null;
  }catch(e){return false;}
- const t=txt.slice(0,20000);
- if(!t||!/\bpacking\s*list\b/i.test(t))return false;
- const sig=['gross\\s*(?:wt|weight)','net\\s*(?:wt|weight)','cbm|cubic','dimension|measurement',
-  'carton|package|pallet|drum|crate|bundle'].filter(r=>new RegExp(r,'i').test(t)).length;
- return sig>=2;
+}
+async function looksLikeAppt(f){
+ const t=await probeDocText(f);
+ if(t===false)return false;
+ if(t===null)return /\bappoint|\bnominat/i.test(f.name);
+ const nom=/\bappoint|\bnominat/i.test(f.name);
+ const body=/\b(hereby|wish to|are hereby|pleased to)\s+appoint\b|\bappointment\s+(?:letter|as|of)\b|\bletter\s+of\s+appointment\b|\bnominat(?:ed?|ion)\b/i.test(t);
+ const agt=/\bagent|\bagency|\bport\s+call\b|\bvessel\b|\bberth\b/i.test(t);
+ return (nom||body)&&(agt||nom&&body);
+}
+/* CLASSIFY AT THE DOOR. The lanes are different machines, so a document is
+   identified before any parser sees it: packing lists price per lift, the
+   appointment letter fills vessel and principal, everything else is cargo
+   paper. Detection proposes; the confirm below disposes. */
+async function classifyDoc(f){
+ if(await looksLikePacking(f))return 'p';
+ if(await looksLikeAppt(f))return 'a';
+ return 'c';
 }
 async function cargoTake(fs){
  const arr=[...fs];
  if(!arr.length)return;
  if(S.j.cat==='dryBulk'){
   if(arr.length>1)extractCargo(arr);else readFile(arr[0],'c');return;}
- const pk=[],rest=[];
- for(const f of arr){((await looksLikePacking(f))?pk:rest).push(f);}
- if(!pk.length){
+ const pk=[],ap=[],rest=[];
+ for(const f of arr){const k=await classifyDoc(f);(k==='p'?pk:k==='a'?ap:rest).push(f);}
+ if(!pk.length&&!ap.length){
   if(arr.length>1)extractCargo(arr);else readFile(arr[0],'c');return;}
- const q=confirm('“'+pk[0].name+'” looks like a packing list rather than a manifest or Bill of Lading.\n\nRead it as a packing list (lift-by-lift pricing) instead?'
-  +(pk.length>1?'\n\n'+pk.length+' packing lists detected — the first moves to the packing lane; the rest stay with the cargo documents.':''));
+ const moves=[];
+ if(pk.length)moves.push('“'+pk[0].name+'” looks like a packing list (lift-by-lift pricing)');
+ if(ap.length)moves.push('“'+ap[0].name+'” looks like an agency appointment letter (vessel & principal details)');
+ const extras=Math.max(0,pk.length-1)+Math.max(0,ap.length-1);
+ const q=confirm(moves.join('\n')+'\n\nRead '+(moves.length>1?'these documents in their own lanes':'the document in its own lane')+' instead?'
+  +(extras?'\n\nMore files of the same kind were detected — the first of each kind moves; the rest stay with the cargo documents.':''));
  if(q){
-  readFile(pk[0],'p');
-  rest.push(...pk.slice(1));
-  const dzp=$('#dzP');if(dzp){dzp.classList.add('over');setTimeout(()=>dzp.classList.remove('over'),1400);}
-  toast('Moved to the packing list lane — press “Read packing list” when ready.','ok');
- }else rest.push(...pk);
+  if(pk.length){readFile(pk[0],'p');rest.push(...pk.slice(1));
+   const dzp=$('#dzP');if(dzp){dzp.classList.add('over');setTimeout(()=>dzp.classList.remove('over'),1400);}
+   toast('Moved to the packing list lane — press “Read packing list” when ready.','ok');}
+  if(ap.length){readFile(ap[0],'a');rest.push(...ap.slice(1));
+   const dza=$('#dzA');if(dza){dza.classList.add('over');setTimeout(()=>dza.classList.remove('over'),1400);}
+   toast('Moved to the appointment letter lane — press “Read appointment letter” when ready.','ok');}
+ }else rest.push(...pk,...ap);
  if(rest.length>1)extractCargo(rest);else if(rest.length===1)readFile(rest[0],'c');
 }
 /* ════════════════ WIRING ═══════════════════════════════════════════════════ */
