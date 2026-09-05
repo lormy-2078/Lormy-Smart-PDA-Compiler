@@ -124,3 +124,22 @@ ISPS stays flat in every direction; 3L1019 + the 1.89 shore twin stay per unit.
   4D13006-14, Storage 4G3xxx (7 days free, banded GH¢), Craneage 3H4xxx,
   motor bikes 3I3xxx, national/regional regime 10A3/10A8/10A9/10C3.
 - RoRo tile confirmed present: {id:'roro', set:{callType:'cargo',vtype:'RoRo',cat:'genBreakbulk'}}.
+
+## v2.4.0 — comprehensive RoRo account
+
+A call with vehicles now raises the full likely account:
+- 3% "Estimated delay" over vehicle+conventional stevedoring (agency estimate;
+  replaces the per-line 1% estimate on vehicle calls — one estimate per call).
+- Ship Call Fee $1,800 and Tally $500 as pending lumpsums (billed on TEM26059,
+  not GPHA printed rows; one switch each to remove; nil-listed Tally merged away).
+- Everything else already tariff: vehicle quintet per direction, conventional
+  stream (dues 5.32, ISPS 0.53, PIDD 0.40, 3A stev, 3L/4H overtime), GSA per
+  tonne, GMA levy (RoRo row 0.12), light dues 0.088, RO-RO abatement on ship side.
+
+### Known deltas vs TEM26059 (documented, not "fixed")
+- Conventional quantities: engine bills C(1) higher-of (2,253 MT beats
+  2,187.716 CBM); the sheet billed CBM. Book wins until the user says otherwise.
+- Mooring: engine 572.95/mvmt (622.77 [2A4006] − 8% RoRo abatement); sheet
+  609.75 implies a 662.77 base that is NOT in the Aug-2023 book — likely a
+  post-2023 revision. Book stays controlling until an updated tariff lands.
+- GSA: no vehicle row in the GSA schedule; vehicles excluded per the sheet.
