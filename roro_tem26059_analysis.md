@@ -153,3 +153,15 @@ the placeholder probe no longer invents a conventional tonne for unit-only
 calls, and the preview lists the ship lines, the vehicle quintet + both
 overtime twins, and the flagged practice lines, grouped per PDA exactly as the
 real compute() assigns them. Steps aside as before once real figures exist.
+
+## Improvement audit — v2.9.1 (05 Sep 26)
+
+Health sweep on v2.9.0 before further feature work; results:
+
+1. **Tile sweep (headless, all 9):** blank/dryBulk/breakBulk/liquidBulk/liner/offshore/cruise/nonCargo/roro — all compute, zero page errors, zero console errors; every v2.5–v2.9 surface present (hold gate, review queue, fixture library, undo/redo, verdict chips, gate status).
+2. **Tariff citation integrity:** 35 tariff codes cited in the pricing engine — all 35 resolve against `data/gpha_tariff_reference.json` (1,698 rows). Zero orphan codes.
+3. **Static checks:** 0 duplicate element ids; 0 orphaned onclick handlers (64 invoked, all defined).
+4. **House-rule enforcement (no personal pronouns in UI copy):** 21 residual hits found and removed — label "Our reference" → "Job reference"; six tooltips (discharge-rate maths, previous-Ghana-port light dues, concession-berth operator pricing, cedi→USD conversion, DG monitoring days, receiver dropdown) and eight JS strings (online/offline toasts, copy-line toast, backup/restore/erase confirms, rate placeholder, restore toast). Labels/tips/placeholders/toasts now 100% pronoun-free (sweep: 0 hits).
+5. **Open judgment call:** the first-run guide overlay prose is written in a conversational second-person voice (~8 pronoun uses); left as-is pending an explicit decision that the house rule extends to guide narration.
+
+Verified: `node --check` clean; 9-tile audit re-run after edits — zero errors; shifting/anchorage indicative guarantee re-confirmed. Pushed as `8f8eea8`.
