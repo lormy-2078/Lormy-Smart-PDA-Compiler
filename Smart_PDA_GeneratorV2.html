@@ -163,7 +163,7 @@ a{color:var(--accInk)}
   transition:stroke-dashoffset .5s var(--ez)}
 .ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font:700 9.5px/1 var(--mono);color:var(--ink2)}
-.chips{display:flex;gap:6px;flex:1;min-width:0;overflow:hidden}
+.chips{display:flex;gap:6px;flex:1;min-width:0;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:8px;
   background:var(--card2);border:1px solid var(--line);font-size:var(--f0);color:var(--ink);
   white-space:nowrap;max-width:250px;overflow:hidden;text-overflow:ellipsis}
@@ -1668,7 +1668,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.3 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.4 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73789,7 +73789,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.3.3';
+const VER='2.3.4';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -82478,6 +82478,12 @@ function countTo(e,to){
  (function st(t){const p=Math.min(1,(t-t0)/450),k=1-Math.pow(1-p,3);
   e.textContent=$m(from+(to-from)*k);if(p<1)requestAnimationFrame(st);})(t0);
 }
+function tradeTileName(){
+ if(S.profile&&S.profile.n)return String(S.profile.n).replace(/&amp;/g,'&');
+ const c=fixtureCover(S.j);
+ if(c){const t=TRADES.find(x=>x.cover===c);if(t)return String(t.n).replace(/&amp;/g,'&');}
+ return '';
+}
 function paintCtx(){
  const bar=$('#ctx'),on=view==='job'&&!!S.j.ref;
  bar.style.display=on?'':'none';
@@ -82491,6 +82497,14 @@ function paintCtx(){
  const c=[],ch=(k,v,cl)=>{if(v)c.push('<span class="chip '+(cl||'')+'"><u>'+k+'</u>'+esc(String(v))+'</span>');};
  ch('Ref',S.j.ref);ch('Vessel',S.j.vessel||'TBN');ch('Port',S.j.port);ch('ETA',S.j.eta||'—');
  const cgo=cargoChip();if(cgo)ch('Cargo',cgo);
+ /* THE TILE AND ITS LINER TERMS, NAMED BEFORE STATUS — added 2026-09-05 at the
+    user's yellow-marked request: an operator glancing at the bar should see
+    which trade tile the call lives in and who bears the handling here, before
+    the readiness verdict. The tile is the one the job was started from
+    (S.profile); older saved jobs that predate tiles fall back to the trade
+    their fields describe, via the same mapping the fixtures use. */
+ const tn=tradeTileName();if(tn)ch('Trade',tn);
+ if(S.j.liner)ch('Liner terms',LT_NAME[S.j.liner]||S.j.liner);
  const r=readiness();ch('Status',r.ok?'Ready to issue':(r.e.length?'Details missing':'Check warnings'),r.ok?'ok':(r.e.length?'bad':'warn'));
  $('#chips').innerHTML=c.join('');
  let pp=0,rr=0;S.lines.forEach(i=>{if(i.off)return;if(i.payer==='principal')pp+=i.amt;else rr+=i.amt;});
