@@ -1678,7 +1678,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.9.0 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.9.1 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1849,7 +1849,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
           <select data-f="reqType"><option value="">— select —</option><option>Enquiry</option><option>Appointment</option></select>
           <div class="decw" id="reqNote"></div></div>
         <div><label class="f">Port of call</label><select data-f="port"><option>Takoradi</option><option>Tema</option></select></div>
-        <div><label class="f">Our reference</label><input data-f="ref" readonly style="background:var(--card2);font-weight:650"></div>
+        <div><label class="f">Job reference</label><input data-f="ref" readonly style="background:var(--card2);font-weight:650"></div>
         <div><label class="f">ETA <span class="hint">?<span class="tip">Prints on the face of the PDA. On an <b>enquiry</b> it may be left blank and prints as <b>TBA</b>; an <b>appointment</b> should carry it.</span></span></label><input data-f="eta" type="date"></div>
       </div></div></div>
 
@@ -1886,7 +1886,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
         <div><label class="f">Cargo category</label><select data-f="cat" id="catSel"></select></div>
         <div><label class="f">Commodity</label><select data-f="com" id="comSel"></select><div class="decw" id="comDec" style="display:none"></div></div>
         <div><label class="f">Cargo quantity (MT)</label><input data-f="qty" type="number" step="any"></div>
-        <div><label class="f"><span id="rateLbl">Discharge</span> rate (MT per day) <span class="hint">?<span class="tip">The agreed rate for this call. Enter it and the <b>provisional port stay is worked out for you</b> — quantity ÷ rate, <b>rounded up to whole days</b>. Leave it empty and the port stay stays yours to enter by hand. Changing the quantity anywhere re-derives the stay from this rate.</span></span></label>
+        <div><label class="f"><span id="rateLbl">Discharge</span> rate (MT per day) <span class="hint">?<span class="tip">The agreed rate for this call. Enter it and the <b>provisional port stay is worked out automatically</b> — quantity ÷ rate, <b>rounded up to whole days</b>. Leave it empty and the port stay stays free to enter by hand. Changing the quantity anywhere re-derives the stay from this rate.</span></span></label>
           <input data-f="dischRate" type="number" step="any" min="0" placeholder="e.g. 5000"></div>
         <div><label class="f">Prov. port stay (days) <span class="hint">?<span class="tip">Derived as <b>quantity ÷ rate, rounded up</b> when a load/discharge rate is set; otherwise enter it yourself. Harbour rent and several surcharges are driven by it, so the PDA will not pass the readiness check until it is set. Typing over it is fine — but a later change to the quantity or the rate re-derives it.</span></span></label>
           <input data-f="stay" type="number" step="1" min="0" placeholder="required"></div>
@@ -1965,7 +1965,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
       <div class="sm" style="margin-bottom:10px">The movements for this call and the GPHA conditions that change the marine charges. Leave unticked for a normal call.</div>
       <div class="grid">
         <div><label class="f">Berth <span class="hint">?<span class="tip">Naming the berth checks the vessel against that berth's own published length and depth limits. It changes no charge — it only drives the readiness warnings.</span></span></label><select data-f="berth" id="berthSel"></select></div>
-        <div><label class="f">Previous Ghana port <span class="hint">?<span class="tip">Arriving from another Ghanaian port on the same voyage often means <b>light dues were already paid</b>. Naming it flags that line for you to check — the charge is never removed automatically.</span></span></label><input data-f="prevPort" placeholder="none — first Ghana call"></div>
+        <div><label class="f">Previous Ghana port <span class="hint">?<span class="tip">Arriving from another Ghanaian port on the same voyage often means <b>light dues were already paid</b>. Naming it flags that line to check — the charge is never removed automatically.</span></span></label><input data-f="prevPort" placeholder="none — first Ghana call"></div>
         <!-- Craneage and MHC count used to be duplicated here, identical to the
              pair in the Cargo card above and visible at the same time on every
              bagged call — the same question asked twice on one page. Both copies
@@ -2032,14 +2032,14 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
            by box lives on the apply row below instead, so there is exactly one
            place to look for each decision. -->
       <div class="grid">
-        <div><label class="f">Terminal / handling operator <span class="hint">?<span class="tip">GPHA levies port dues, ISPS, PIDD and every marine service at <b>every</b> berth. Only <b>stevedoring, craneage and terminal handling</b> belong to whoever operates the berth. Choose a concession and those three are still raised — so they cannot be forgotten — but left at zero for you to price from the operator's tariff.</span></span></label>
+        <div><label class="f">Terminal / handling operator <span class="hint">?<span class="tip">GPHA levies port dues, ISPS, PIDD and every marine service at <b>every</b> berth. Only <b>stevedoring, craneage and terminal handling</b> belong to whoever operates the berth. Choose a concession and those three are still raised — so they cannot be forgotten — but left at zero to be priced from the operator's tariff.</span></span></label>
           <select data-f="ctrTerminal" id="ctrTermSel"></select></div>
-        <div><label class="f">Exchange rate (GH¢ per US$) <span class="hint">?<span class="tip">Terminal handling on import and export of stuffed boxes is published in <b>Ghana cedis</b>. General Terms N(1) fixes the conversion at the rate on the <b>date of payment</b>, so the app never invents one — enter the rate you are quoting at and it prints on the PDA. Transhipment, transit and every empty are already in US$ and need no rate.</span></span></label>
+        <div><label class="f">Exchange rate (GH¢ per US$) <span class="hint">?<span class="tip">Terminal handling on import and export of stuffed boxes is published in <b>Ghana cedis</b>. General Terms N(1) fixes the conversion at the rate on the <b>date of payment</b>, so the app never invents one — enter the rate being quoted and it prints on the PDA. Transhipment, transit and every empty are already in US$ and need no rate.</span></span></label>
           <input data-f="fx" type="number" step="0.0001" min="0" placeholder="e.g. 15.20"></div>
         <div><label class="f">Worked by <span class="hint">?<span class="tip">Craneage arises <b>only where a port crane is deployed</b> [D(4)] — a ship worked by her own gear carries none, and the <b>$5,200 per-crane minimum [3H6001] is specific to Mobile Harbour Cranes</b>. Everything else (stevedoring, dues, overtime, terminal handling) is charged on the box whoever lifts it.</span></span></label>
           <select data-f="craneType"><option value="mhc">GPHA Mobile Harbour Crane (MHC)</option><option value="ship">Ship's own gear</option><option value="gantry">Ship-to-shore gantry</option></select></div>
         <div data-only="craneMhc"><label class="f">MHC cranes deployed</label><input data-f="craneN" type="number" min="1" step="1"></div>
-        <div><label class="f">DG monitoring (days) <span class="hint">?<span class="tip">Fourth Schedule G.6 charges <b>monitoring of dangerous goods per box per day</b> — GH¢11.29 import, GH¢10.06 export, $2.10 transhipment and transit [4G6002]. Raised only on boxes set to <b>Dangerous Goods II</b>, and only once you enter a number of days. <b>Group I never attracts it</b> — C(20) routes DG I direct at all times and never stores it, so no monitoring day can accrue.</span></span></label>
+        <div><label class="f">DG monitoring (days) <span class="hint">?<span class="tip">Fourth Schedule G.6 charges <b>monitoring of dangerous goods per box per day</b> — GH¢11.29 import, GH¢10.06 export, $2.10 transhipment and transit [4G6002]. Raised only on boxes set to <b>Dangerous Goods II</b>, and only once a number of days is entered. <b>Group I never attracts it</b> — C(20) routes DG I direct at all times and never stores it, so no monitoring day can accrue.</span></span></label>
           <input data-f="dgMonDays" type="number" min="0" step="1" placeholder="blank = not raised"></div>
       </div>
       <div id="dgGate" style="display:none"></div>
@@ -2151,7 +2151,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
     <div class="card"><h2><svg class="ic" viewBox="0 0 24 24"><use href="#i-users"/></svg> <span id="ciRole">Cargo interest</span> <span class="sum" id="ciSub">Receiver on an import, shipper on an export — bears the cargo-related costs</span></h2>
       <div class="grid">
         <div><label class="f">Saved <span id="ciSaved">receiver</span></label><select data-f="receiverId" id="rcvSel"></select></div>
-        <div><label class="f"><span id="ciName">Receiver</span> <span class="hint">?<span class="tip">Pick a saved one from the dropdown and the name, address and attention all fill in. Or type any name — ones you have used before appear as you type, and a new name is remembered once the job is saved, so the list becomes <b>your</b> cargo interests rather than a fixed set.</span></span></label>
+        <div><label class="f"><span id="ciName">Receiver</span> <span class="hint">?<span class="tip">Pick a saved one from the dropdown and the name, address and attention all fill in. Or type any name — previously used names appear while typing, and a new name is remembered once the job is saved, so the list becomes <b>the agency's own</b> cargo interests rather than a fixed set.</span></span></label>
           <input data-f="rName" list="rcvList" autocomplete="off" placeholder="Type or pick"><datalist id="rcvList"></datalist></div>
         <div><label class="f">Address</label><input data-f="rAddr"></div>
         <div><label class="f">Attention</label><input data-f="rAttn"></div>
@@ -73831,7 +73831,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.9.0';
+const VER='2.9.1';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -75277,8 +75277,8 @@ addEventListener('pagehide',()=>{if(dirty)writeSession();});
 addEventListener('blur',()=>{if(dirty)writeSession();});
 addEventListener('beforeunload',e=>{if(dirty){writeSession();}});
 /* On coming back online, tell the user their work survived. */
-addEventListener('online',()=>toast('Back online. Your work was never interrupted — it is saved in this browser.','ok'));
-addEventListener('offline',()=>toast('Offline. Everything except AI document reading keeps working, and your work keeps saving.','',6000));
+addEventListener('online',()=>toast('Back online. The work was never interrupted — everything is saved in this browser.','ok'));
+addEventListener('offline',()=>toast('Offline. Everything except AI document reading keeps working, and the work keeps saving.','',6000));
 
 /* EVERY "?" HINT, KEPT ON SCREEN WHEREVER IT SITS. See the CSS comment
    above #hintTip for why a singleton copy rather than showing `.tip` where
@@ -80184,7 +80184,7 @@ function paintOff(){
    +optHtml+'</select></td>'
    +'<td class="num"><input type="number" min="0" step="any" value="'+esc(l.qty)+'" onchange="setOff(\''+l.id+'\',\'qty\',this.value)"></td>'
    +'<td class="sm">'+esc(m.u)+'</td>'
-   +'<td class="num"><input type="number" min="0" step="0.01" placeholder="'+(m.r!=null?('suggested '+m.r):'your rate')+'" value="'+esc(l.rate)+'" onchange="setOff(\''+l.id+'\',\'rate\',this.value)"'+(m.src?(' title="Rate last observed on '+esc(m.src)+' — a suggestion, not a tariff"'):'')+'></td>'
+   +'<td class="num"><input type="number" min="0" step="0.01" placeholder="'+(m.r!=null?('suggested '+m.r):'the rate')+'" value="'+esc(l.rate)+'" onchange="setOff(\''+l.id+'\',\'rate\',this.value)"'+(m.src?(' title="Rate last observed on '+esc(m.src)+' — a suggestion, not a tariff"'):'')+'></td>'
    +'<td><select onchange="setOff(\''+l.id+'\',\'payer\',this.value)">'
     +'<option value="auto"'+((l.payer||'auto')==='auto'?' selected':'')+'>Per liner terms</option>'
     +'<option value="principal"'+(l.payer==='principal'?' selected':'')+'>Principal</option>'
@@ -82097,7 +82097,7 @@ function dupLine(id){
   rate:num(i.rate),unit:i.unit||'Lumpsum',qty:num(i.qty)||1,
   payer:i.payer||'principal',gf:false,vat:false});
  markDirty();recalc();
- toast('Copied \u2014 the new line is yours to edit, with no tariff code.','ok',5000);
+ toast('Copied \u2014 the new line is free to edit, with no tariff code.','ok',5000);
 }
 document.addEventListener('click',function(e){
  /* THE PANEL CLOSED ITSELF THE INSTANT IT OPENED. A menu item runs its inline
@@ -87187,7 +87187,7 @@ function dumpAll(){
  const b=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});
  const a=el('a');a.href=URL.createObjectURL(b);
  a.download='smart-pda-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
- toast('Backup downloaded. Keep it somewhere safe — it holds everything except your AI key.','ok');
+ toast('Backup downloaded. Keep it somewhere safe — it holds everything except the AI key.','ok');
 }
 function loadAll(ev){
  const f=ev.target.files[0];if(!f)return;
@@ -87195,7 +87195,7 @@ function loadAll(ev){
  rd.onload=e=>{try{
   const d=JSON.parse(e.target.result);
   if(d.app!=='SmartPDA'&&!d.hist)throw new Error('That is not a Smart PDA backup.');
-  if(!confirm('Restore this backup? It replaces your settings, library and fixtures on this browser.'))return;
+  if(!confirm('Restore this backup? It replaces the settings, library and fixtures on this browser.'))return;
   if(d.set)saveSet(d.set);
   if(Array.isArray(d.hist))saveHist(d.hist);
   if(Array.isArray(d.fix))saveFix(d.fix);
@@ -87207,7 +87207,7 @@ function loadAll(ev){
 }
 function wipeAll(){
  if(!confirm('Erase ALL local data — library, fixtures, settings and the open job? This cannot be undone.'))return;
- if(!confirm('Really erase everything? Export a backup first if you are not sure.'))return;
+ if(!confirm('Really erase everything? Export a backup first if in doubt.'))return;
  ['set','hist','fix','session','session.bak','aiKey','aiProv','aiRemember'].forEach(DB.d);
  location.reload();
 }
@@ -87637,7 +87637,7 @@ function boot(){
  fillBerths();fillCom();fillTerms();syncForm();
  if(restored){plRebuild();applyPrincipalQuiet();compute();}
  keyHint();dbg({});paintHome();nav(restored?'home':'home');
- if(restored){render();toast('Your work was restored from '+restoredAt+' — nothing was lost.','ok',8000);}
+ if(restored){render();toast('The workspace was restored from '+restoredAt+' — nothing was lost.','ok',8000);}
  maybeFirstRun();
  /* Fetch the tariff at start-up, not on first visit to the Tariff tab: the
     ENGINE reads rates from it now, so waiting until someone opens that page
