@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.7.0 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.7.1 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1766,10 +1766,10 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
          rather than one rewritten message beside two untouched ones. -->
     <div class="card"><h2><svg class="ic" viewBox="0 0 24 24"><use href="#i-upload"/></svg> Upload documents <span class="sum" id="docSum">Optional — the system fills in the details automatically.</span></h2>
       <div class="sm" style="margin:-4px 0 var(--s3)">Prefer not to upload? Enter or paste the information manually below.</div>
-      <!-- Each Read button sits under the box it acts on. In one row they read as
-           three alternatives to a single upload; under their own dropzone the
-           pairing is obvious without reading the labels. -->
-      <div class="grid c3" id="docGrid">
+      <!-- Each Read button sits under the box it acts on. The packing list no
+           longer shows as its own box (user, 2026-09-05) — it is detected at
+           the door of the cargo documents box and processed from there. -->
+      <div class="grid c2" id="docGrid">
         <div><label class="f">Appointment letter</label>
           <div class="sm docHelp">Upload the agency appointment letter to fill in Vessel particulars and principal details.</div>
           <div class="dz" id="dzA"><svg class="ic lg" viewBox="0 0 24 24"><use href="#i-file"/></svg>
@@ -1777,30 +1777,33 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
             <input type="file" id="fA" accept=".pdf,.txt,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.webp"></div>
           <button class="p wide" id="exA"><svg class="ic" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg> Read appointment letter</button></div>
         <div><label class="f">Cargo documents</label>
-          <div class="sm docHelp">Upload cargo manifests, Bills of Lading &amp; Mate receipts to extract/fill in cargo and receiver/shipper details. Add several at once — the system combines them. A packing list dropped here is detected and offered to the packing list lane.</div>
+          <div class="sm docHelp">Upload cargo manifests, Bills of Lading &amp; Mate receipts to extract/fill in cargo and receiver/shipper details. Add several at once — the system combines them. Packing lists and appointment letters dropped here are detected at the door and sent to their own processing.</div>
           <div class="dz" id="dzC"><svg class="ic lg" viewBox="0 0 24 24"><use href="#i-box"/></svg>
-            <div>Drop manifests or Bills of Lading here, or <b>choose files</b></div><div class="sm">PDF · Word · Excel · image · text</div>
+            <div>Drop your documents here, or <b>choose files</b></div><div class="sm">Manifests · Bills of Lading · packing lists</div>
             <input type="file" id="fC" multiple accept=".pdf,.txt,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.webp"></div>
-          <button class="p wide" id="exC"><svg class="ic" viewBox="0 0 24 24"><use href="#i-box"/></svg> Read cargo documents</button></div>
-        <!-- Dry bulk is priced on tonnage, never on a packing list — the box, its
-             paste-text column and the parse button all stand down together, and
-             the grid drops to two columns so the space doesn't sit empty. -->
-        <div data-only="notDryBulk"><label class="f">Packing list</label>
-          <div class="sm docHelp">Upload packing list to identify cargo type, quantity, weight/measure and price per lift.</div>
-          <div class="dz" id="dzP"><svg class="ic lg" viewBox="0 0 24 24"><use href="#i-scale"/></svg>
-            <div>Drop your packing list here, or <b>choose a file</b></div><div class="sm">Project, break-bulk and oil &amp; gas cargo</div>
-            <input type="file" id="fP" accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.webp,.docx,.txt"></div>
-          <button class="p wide" id="exP"><svg class="ic" viewBox="0 0 24 24"><use href="#i-scale"/></svg> Read packing list</button></div>
+          <button class="p wide" id="exC"><svg class="ic" viewBox="0 0 24 24"><use href="#i-box"/></svg> Read cargo documents</button>
+          <button class="p wide" id="exP" style="display:none;margin-top:6px"><svg class="ic" viewBox="0 0 24 24"><use href="#i-scale"/></svg> Read packing list</button></div>
+      </div>
+      <!-- THE PACKING LANE IS FOLDED INTO THE CARGO DOCUMENTS BOX (user,
+           2026-09-05: "the packing list is still showing"). The classifier
+           detects a packing list at the door and routes it into this hidden
+           lane; dzP and fP stay in the DOM so the lane can still receive and
+           preview what the router sends it, and the Read packing list button
+           above appears the moment the lane holds something. -->
+      <div style="display:none">
+        <div class="dz" id="dzP"><input type="file" id="fP" accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.webp,.docx,.txt"></div>
       </div>
       <div class="row" style="margin-top:var(--s3)">
         <span class="sm" id="keyHint" style="margin-left:auto"></span>
       </div>
       <div class="note" id="aiSt" style="display:none"></div>
-      <div class="grid c3" id="docTxtGrid" style="margin-top:var(--s4)">
+      <div class="grid c2" id="docTxtGrid" style="margin-top:var(--s4)">
         <div><label class="f">Appointment letter text — optional</label><textarea id="txA" rows="4" placeholder="Paste the appointment letter text here instead of uploading a file"></textarea></div>
         <div><label class="f">Cargo document text — optional</label><textarea id="txC" rows="4" placeholder="Paste cargo document text here instead of uploading a file"></textarea></div>
-        <div data-only="notDryBulk"><label class="f">Packing list text — optional</label><textarea id="txP" rows="4" placeholder="Paste packing list text here instead of uploading a file"></textarea></div>
       </div>
+      <!-- the packing-list paste box is folded away with its lane; extractPacking
+           still reads it when the router or a restored job puts text there -->
+      <div style="display:none"><textarea id="txP" rows="4" placeholder="Paste packing list text here instead of uploading a file"></textarea></div>
       <div class="note" id="xdoc" style="display:none;margin-top:var(--s4)"></div>
       <div id="prev" class="row" style="margin-top:var(--s3)"></div>
       <details style="margin-top:var(--s3)"><summary class="sm" style="cursor:pointer">Troubleshooting details</summary>
@@ -73805,7 +73808,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.7.0';
+const VER='2.7.1';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -79199,7 +79202,12 @@ function paintGroups(){
     does not sit empty beside the two boxes dry bulk actually uses. */
  const notDryBulk=j.cat!=='dryBulk';
  only('notDryBulk',notDryBulk);
- [$('#docGrid'),$('#docTxtGrid')].forEach(g=>{if(g){g.classList.toggle('c3',notDryBulk);g.classList.toggle('c2',!notDryBulk);}});
+ /* The packing lane lives inside the cargo documents box now, so both grids
+    stay two-up; the Read packing list button simply appears once the hidden
+    lane holds something. */
+ [$('#docGrid'),$('#docTxtGrid')].forEach(g=>{if(g){g.classList.remove('c3');g.classList.add('c2');}});
+ {const exP=$('#exP');
+  if(exP)exP.style.display=((S.docs.p&&S.docs.p.name)||($('#txP')&&$('#txP').value.trim()))?'':'none';}
  only('nonCargo',!isCargo());
  only('passenger',j.callType==='passenger');
  only('pax',j.callType==='passenger'&&j.paxWorked!=='no');
@@ -87338,8 +87346,9 @@ async function cargoTake(fs){
   +(extras?'\n\nMore files of the same kind were detected — the first of each kind moves; the rest stay with the cargo documents.':''));
  if(q){
   if(pk.length){readFile(pk[0],'p');rest.push(...pk.slice(1));
-   const dzp=$('#dzP');if(dzp){dzp.classList.add('over');setTimeout(()=>dzp.classList.remove('over'),1400);}
-   toast('Moved to the packing list lane — press “Read packing list” when ready.','ok');}
+   setTimeout(()=>{const b=$('#exP');
+    if(b){b.classList.add('over');setTimeout(()=>b.classList.remove('over'),1400);}},50);
+   toast('Packing list detected — press “Read packing list” below when ready.','ok');}
   if(ap.length){readFile(ap[0],'a');rest.push(...ap.slice(1));
    const dza=$('#dzA');if(dza){dza.classList.add('over');setTimeout(()=>dza.classList.remove('over'),1400);}
    toast('Moved to the appointment letter lane — press “Read appointment letter” when ready.','ok');}
