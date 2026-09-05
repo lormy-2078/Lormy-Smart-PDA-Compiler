@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.1 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.2 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1868,7 +1868,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
           <input data-f="dischRate" type="number" step="any" min="0" placeholder="e.g. 5000"></div>
         <div><label class="f">Prov. port stay (days) <span class="hint">?<span class="tip">Derived as <b>quantity ÷ rate, rounded up</b> when a load/discharge rate is set; otherwise enter it yourself. Harbour rent and several surcharges are driven by it, so the PDA will not pass the readiness check until it is set. Typing over it is fine — but a later change to the quantity or the rate re-derives it.</span></span></label>
           <input data-f="stay" type="number" step="1" min="0" placeholder="required"></div>
-        <div><label class="f">Liner terms <span class="hint">?<span class="tip">Liner terms describe <b>each leg separately</b> — who pays to load ("in") and who pays to discharge ("out"). Only one leg happens at this port, so the <b>trade direction</b> decides which half applies. On an export the loading leg governs; on an import the discharge leg does. This decides <b>which document</b> every cargo charge lands on.</span></span></label>
+        <div><label class="f">Liner terms <span class="hint">?<span class="tip">Liner terms describe <b>each leg separately</b> — who pays to load ("in") and who pays to discharge ("out"). Only one leg happens at this port, so the <b>trade direction</b> decides which half applies. On an export the loading leg governs; on an import the discharge leg does. This decides <b>which document</b> every cargo charge lands on — as the <b>default</b>: the contract between the parties governs the real allocation, and any charge re-routes through its ⋯ menu (<b>Bill to…</b>).</span></span></label>
           <select data-f="liner" id="linerSel"><option value="">— select —</option></select>
           <div class="sm" id="linerNote"></div></div>
         <!-- UNPACKED VEHICLES [First Schedule B.6/B.12, J.3, K.3 · Third Schedule F].
@@ -73798,7 +73798,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.4.1';
+const VER='2.4.2';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74681,7 +74681,15 @@ const bearer=(l,d)=>{if(noCargoInterest(d))return 'ship';
    through the handling switch. One rule now, every commodity.
 
    `directive` is the Takoradi export directive, which sends the cargo invoices to
-   the ship's agent whatever the terms say. */
+   the ship's agent whatever the terms say.
+
+   AND THE TERMS ARE ONLY THE DEFAULT ROUTING. Regardless of the general
+   interpretation of any term, the allocation that actually governs is the
+   contract between the parties — charter party, booking or agency terms may
+   move any charge to either account. That is one reason this application is
+   customised: every line carries its own "Bill to…" override in the row menu,
+   so the terms open the account and the contract closes it. These functions
+   therefore answer "where does this start", never "where must it stay". */
 /* Same guard on the levy rule. The direction argument is optional and defaults
    to the job's, so the four existing call sites need no change: one passes the
    GPHA-directive flag as `directive`, the rest pass liner terms alone. */
