@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.6.0 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.7.0 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1806,6 +1806,12 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
       <details style="margin-top:var(--s3)"><summary class="sm" style="cursor:pointer">Troubleshooting details</summary>
         <pre id="dbg" style="background:var(--sunk);color:var(--ink);border-radius:var(--r1);padding:12px;
           font:11px/1.5 var(--mono);white-space:pre-wrap;max-height:320px;overflow:auto;margin-top:8px"></pre></details>
+      <details style="margin-top:var(--s3)"><summary class="sm" style="cursor:pointer">Classifier fixture library<span class="sm" id="dfSum"></span></summary>
+        <div class="sm" style="margin-top:6px">Every document read is kept here as a fixture, labelled by the lane it was read in. Recheck replays the current classifier over the library and flags any document it would now send elsewhere.</div>
+        <div class="row" style="margin-top:8px">
+          <button class="p" id="dfRe">Recheck classifier</button>
+          <button class="p" id="dfClear">Clear library</button></div>
+        <div class="sm" id="dfRes" style="margin-top:8px"></div></details>
       <div class="stepnav"><span></span><button class="p" data-go="call">Continue <svg class="ic" viewBox="0 0 24 24"><use href="#i-right"/></svg></button></div>
     </div>
   </div>
@@ -73799,7 +73805,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.6.0';
+const VER='2.7.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -78761,7 +78767,7 @@ function render(){
  fillDynamic();
  paintRail();paintGroups();paintColBar();paintFitBar();paintCargo();paintCtr();paintCtrSvc();paintOff();paintOG();
  paintPacking();paintDocs();paintBreak();paintReady();paintAsks();paintAskLock();paintPkLock();paintCtx();
- paintLiner();paintCirc();paintScope();paintBasis();paintCross();paintXDoc();paintRcv();
+ paintLiner();paintCirc();paintScope();paintBasis();paintCross();paintXDoc();paintDocFix();paintRcv();
  paintBench();paintOgVis();paintFleet();paintDetected();paintExpChg();paintFrozen();
  autoAdvance();
 }
@@ -84672,6 +84678,9 @@ async function readFile(file,w){
    docTxt[w]=t;S.docs[w].kind='text';S.docs[w].pages=wb.SheetNames.length;
    $('#'+tid).value=t;aiSt('Spreadsheet data extracted.','ok');
   }else{const t=await file.text();docTxt[w]=t;S.docs[w].kind='text';$('#'+tid).value=t;aiSt('File loaded.','ok');}
+  /* THE LABEL IS THE LANE. Whatever lane finally read the file is the
+     operator's verdict on what it is — recorded for the fixture library. */
+  docFixCapture(file,w,docTxt[w]);
   paintPrev();markDirty();render();
  }catch(e){aiSt('Read error: '+e.message,'bad');}
 }
@@ -87216,21 +87225,10 @@ addEventListener('keydown',e=>{
    and moves it to its own lane rather than letting the wrong parser read it
    silently. The question stays a question: intelligence proposes, the agent
    disposes. On dry bulk the packing lane stands down, so nothing is probed. */
-async function looksLikePacking(f){
- const t=await probeDocText(f);
- if(t===false)return false;
- if(t===null)return /\bpack(?:ing)?[\s_\-]?list\b/i.test(f.name);
- if(/\bpacking\s*list\b/i.test(t)){
-  const sig=['gross\\s*(?:wt|weight)','net\\s*(?:wt|weight)','cbm|cubic','dimension|measurement',
-   'carton|package|pallet|drum|crate|bundle'].filter(r=>new RegExp(r,'i').test(t)).length;
-  if(sig>=2)return true;}
- return /\bpack(?:ing)?[\s_\-]?list\b/i.test(f.name);
-}
 /* ONE PROBE, EVERY CLASSIFIER. Reads just enough of the file to classify it —
    the first two PDF pages, the head of a text file, the sheet names and first
-   rows of a workbook — and hands the text to whichever question is being
-   asked. `null` means "not cheaply readable" (images, Word) and `false` a
-   read failure; callers fall back to the filename on both. */
+   rows of a workbook. `null` means "not cheaply readable" (images, Word) and
+   `false` a read failure; the classifier falls back to the filename on both. */
 async function probeDocText(f){
  const ext=(f.name.split('.').pop()||'').toLowerCase();
  try{
@@ -87249,23 +87247,79 @@ async function probeDocText(f){
   return null;
  }catch(e){return false;}
 }
-async function looksLikeAppt(f){
- const t=await probeDocText(f);
- if(t===false)return false;
- if(t===null)return /\bappoint|\bnominat/i.test(f.name);
- const nom=/\bappoint|\bnominat/i.test(f.name);
- const body=/\b(hereby|wish to|are hereby|pleased to)\s+appoint\b|\bappointment\s+(?:letter|as|of)\b|\bletter\s+of\s+appointment\b|\bnominat(?:ed?|ion)\b/i.test(t);
+/* THE CLASSIFIER IN PURE TEXT — name + probe text in, lane out. Kept free of
+   file I/O so the fixture library below can replay it over stored texts
+   without re-dropping anything. The filename rules fire even when the
+   content is not cheaply readable (scans, images, Word); the content rules
+   need the title phrase plus corroborating signals, so a manifest that
+   merely mentions packing does not trip them. */
+function classifyText(name,text){
+ const nm=String(name||'');
+ const pkName=/\bpack(?:ing)?[\s_\-]?list\b/i.test(nm);
+ const apName=/\bappoint|\bnominat/i.test(nm);
+ if(text==null||text===false)return pkName?'p':(apName?'a':'c');
+ const t=String(text).slice(0,20000);
+ if(pkName)return 'p';
+ if(/\bpacking\s*list\b/i.test(t)){
+  const sig=['gross\\s*(?:wt|weight)','net\\s*(?:wt|weight)','cbm|cubic','dimension|measurement',
+   'carton|package|pallet|drum|crate|bundle'].filter(r=>new RegExp(r,'i').test(t)).length;
+  if(sig>=2)return 'p';}
+ const apBody=/\b(hereby|wish to|are hereby|pleased to)\s+appoint\b|\bappointment\s+(?:letter|as|of)\b|\bletter\s+of\s+appointment\b|\bnominat(?:ed?|ion)\b/i.test(t);
  const agt=/\bagent|\bagency|\bport\s+call\b|\bvessel\b|\bberth\b/i.test(t);
- return (nom||body)&&(agt||nom&&body);
+ if((apName||apBody)&&(agt||(apName&&apBody)))return 'a';
+ return 'c';
 }
 /* CLASSIFY AT THE DOOR. The lanes are different machines, so a document is
    identified before any parser sees it: packing lists price per lift, the
    appointment letter fills vessel and principal, everything else is cargo
    paper. Detection proposes; the confirm below disposes. */
-async function classifyDoc(f){
- if(await looksLikePacking(f))return 'p';
- if(await looksLikeAppt(f))return 'a';
- return 'c';
+async function classifyDoc(f){return classifyText(f.name,await probeDocText(f));}
+/* ── DOCUMENT FIXTURE LIBRARY — measurement for the classifier ──────────
+   Every document read becomes a fixture: the probe text, the filename, and
+   the LANE it was read in — the operator's own labelling, since a drop that
+   survives the confirm question, or goes straight into a lane, is the
+   operator saying what the document is. Recheck replays the current
+   classifier over every stored text and reports any disagreement, so a
+   future change to the rules is measured against real agency documents
+   rather than invented ones. Scans and images store no text and recheck on
+   the filename rule alone. The library caps at 40 fixtures, oldest pruned. */
+const docFixList=()=>DB.g('docfix',[]);
+function docFixCapture(file,w,txt){
+ if('acp'.indexOf(w)<0||!file)return;
+ try{
+  const list=docFixList();
+  const key=file.name+'|'+file.size+'|'+(file.lastModified||0);
+  if(list.some(x=>x.key===key))return;
+  list.unshift({id:uid('df'),key,name:file.name,lane:w,
+   txt:txt?String(txt).slice(0,16000):'',at:new Date().toISOString()});
+  while(list.length>40)list.pop();
+  DB.s('docfix',list);paintDocFix();
+ }catch(e){}
+}
+function docFixRecheck(){
+ const list=docFixList();
+ if(!list.length){toast('No document fixtures yet — every document read becomes one.','err');return;}
+ const K={p:'a packing list',a:'an appointment letter',c:'a cargo document'};
+ let ok=0,nameOnly=0;const bad=[];
+ list.forEach(x=>{
+  const t=x.txt||null;
+  if(!t)nameOnly++;
+  const got=classifyText(x.name,t);
+  if(got===x.lane)ok++;
+  else bad.push(x.name+' — read in as '+K[x.lane]+', classifier now says '+K[got]);});
+ const n=list.length,e=$('#dfRes');
+ if(e)e.innerHTML=(bad.length
+   ?'<b>'+bad.length+' of '+n+'</b> no longer classify the way they were read:'
+   :'<b>'+n+' of '+n+'</b> still classify the way they were read'+(nameOnly?' ('+nameOnly+' filename-only)':'')+'.')
+  +bad.map(x=>'<div style="margin-top:4px">⚠ '+esc(x)+'</div>').join('')
+  +(bad.length?'<div class="sm" style="margin-top:6px">Either the rules moved, or the document was read into the wrong lane — the library keeps the lane as the truth until the fixture is cleared.</div>':'');
+ toast(bad.length?(bad.length+' fixture(s) misclassified — see the library.'):('Classifier rechecked '+n+' fixture(s) — all agreed.'),bad.length?'err':'ok');
+}
+function paintDocFix(){
+ const s=$('#dfSum');if(!s)return;
+ const n=docFixList().length;
+ s.textContent=n?(' — '+n+' fixture(s) stored; recheck after any rule change.')
+  :' — no fixtures yet; every document read becomes one.';
 }
 async function cargoTake(fs){
  const arr=[...fs];
@@ -87325,6 +87379,8 @@ function boot(){
  $('#guideOv').addEventListener('click',e=>{if(e.target===$('#guideOv'))closeGuide();});
  dz('dzA','fA','a');dz('dzC','fC','c',1);dz('dzP','fP','p');dz('dzF','fF','f');
  $('#exA').onclick=extractAppt;$('#exC').onclick=()=>doCargo();$('#exP').onclick=extractPacking;
+ $('#dfRe').onclick=docFixRecheck;
+ $('#dfClear').onclick=()=>{if(confirm('Clear the classifier fixture library?')){DB.s('docfix',[]);const r=$('#dfRes');if(r)r.innerHTML='';paintDocFix();}};
  $('#addBl').onclick=()=>addCargo();$('#clearBl').onclick=()=>{if(confirm('Clear every cargo line?')){S.cargo=[];S.docs.c={};markDirty();recalc();}};
  $('#confAllBl').onclick=confAllCargo;
  $('#addCtr').onclick=addCtr;$('#addCtrSvc').onclick=addCtrSvc;
