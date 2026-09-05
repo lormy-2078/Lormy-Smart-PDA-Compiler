@@ -85,7 +85,11 @@
 html{scroll-behavior:smooth}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 body{margin:0;background:var(--bg);color:var(--ink);font:var(--f2)/1.6 var(--sans);
-  -webkit-font-smoothing:antialiased;letter-spacing:0}
+  -webkit-font-smoothing:antialiased;letter-spacing:0;
+  /* Columns of figures line up on screen the way they already do on paper:
+     every digit occupies the same width, in inputs, tables and totals alike. */
+  font-variant-numeric:tabular-nums}
+input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 h1,h2,h3,h4{font-family:'Segoe UI Variable Display',var(--sans);letter-spacing:-.02em;text-wrap:balance;margin:0}
 p{text-wrap:pretty}
 input,td,th,.num,.money,kbd{font-variant-numeric:tabular-nums}
@@ -1670,7 +1674,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.7.2 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.8.0 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1814,7 +1818,8 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
         <div class="row" style="margin-top:8px">
           <button class="p" id="dfRe">Recheck classifier</button>
           <button class="p" id="dfClear">Clear library</button></div>
-        <div class="sm" id="dfRes" style="margin-top:8px"></div></details>
+        <div class="sm" id="dfRes" style="margin-top:8px"></div>
+        <div id="dfList" style="margin-top:8px"></div></details>
       <div class="stepnav"><span></span><button class="p" data-go="call">Continue <svg class="ic" viewBox="0 0 24 24"><use href="#i-right"/></svg></button></div>
     </div>
   </div>
@@ -73808,7 +73813,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.7.2';
+const VER='2.8.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -84693,17 +84698,23 @@ async function readFile(file,w){
  }catch(e){aiSt('Read error: '+e.message,'bad');}
 }
 function aiSt(m,t){const e=$('#aiSt');if(!e)return;e.style.display=m?'':'none';e.className='note '+(t||'');e.textContent=m;}
+/* THE VERDICT CHIP — how the file was read, made visible on the preview tile
+   instead of living only in the status line. A scan says so outright: what is
+   ready is the image, and the text arrives when the Read button does. */
+function docChip(m){
+ const v=m&&m.kind?({'pdf-text':'Text extracted','pdf-scan':'Scanned — image ready',image:'Image ready',text:'Text loaded'}[m.kind]||''):'';
+ return v?'<span class="chip" style="margin-left:6px;padding:2px 8px;font-size:10.5px">'+v+'</span>':'';}
 function paintPrev(){
  const e=$('#prev');if(!e)return;
  const lbl={a:'Appointment',c:'Cargo document',p:'Packing list'};
  e.innerHTML=['a','c','p'].map(w=>{
   const im=visImg[w],m=S.docs[w]||{};
-  if(im&&im.length)return '<div><div class="sm">'+lbl[w]+' — '+esc(m.name||'')+' · '+im.length+' page(s)'+(oriented[w]?' · orientation set':'')+'</div>'
+  if(im&&im.length)return '<div><div class="sm">'+lbl[w]+' — '+esc(m.name||'')+' · '+im.length+' page(s)'+(oriented[w]?' · orientation set':'')+docChip(m)+'</div>'
    +'<img class="thumb" onclick="docModal(\''+w+'\')" src="data:image/jpeg;base64,'+im[0]+'">'
    +'<div class="row" style="margin-top:4px"><button class="sm2" onclick="rotDoc(\''+w+'\',-90)">⟲</button>'
    +'<button class="sm2" onclick="rotDoc(\''+w+'\',90)">⟳</button>'
    +'<button class="sm2" onclick="docModal(\''+w+'\')">'+ico('search')+' Enlarge</button></div></div>';
-  if(docTxt[w])return '<div style="max-width:280px"><div class="sm">'+lbl[w]+' — '+esc(m.name||'')+' · text</div>'
+  if(docTxt[w])return '<div style="max-width:280px"><div class="sm">'+lbl[w]+' — '+esc(m.name||'')+' · text'+docChip(m)+'</div>'
    +'<div class="sm" style="border:1px solid var(--line);border-radius:var(--r1);padding:8px;height:120px;overflow:hidden;background:var(--card)">'
    +esc(docTxt[w].replace(/\s+/g,' ').slice(0,190))+'…</div>'
    +'<button class="sm2" style="margin-top:4px" onclick="docModal(\''+w+'\')">'+ico('search')+' View text</button></div>';
@@ -87324,11 +87335,21 @@ function docFixRecheck(){
  toast(bad.length?(bad.length+' fixture(s) misclassified — see the library.'):('Classifier rechecked '+n+' fixture(s) — all agreed.'),bad.length?'err':'ok');
 }
 function paintDocFix(){
- const s=$('#dfSum');if(!s)return;
- const n=docFixList().length;
- s.textContent=n?(' — '+n+' fixture(s) stored; recheck after any rule change.')
+ const s=$('#dfSum');const list=docFixList();const n=list.length;
+ if(s)s.textContent=n?(' — '+n+' fixture(s) stored; recheck after any rule change.')
   :' — no fixtures yet; every document read becomes one.';
+ /* THE LIBRARY MADE VISIBLE (user, 2026-09-05). A count alone is something to
+    trust blindly; a list the operator can read — name, lane, date — and prune
+    one entry at a time is something to verify. */
+ const e=$('#dfList');if(!e)return;
+ const K={p:'packing list',a:'appointment letter',c:'cargo document'};
+ e.innerHTML=list.map(x=>'<div class="row" style="margin-top:4px;gap:8px;align-items:center">'
+  +'<span class="sm" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(x.name)+'">'+esc(x.name)+'</span>'
+  +'<span class="sm" style="flex:none;opacity:.8">'+(K[x.lane]||x.lane)+(x.txt?'':' · filename-only')+'</span>'
+  +'<span class="sm" style="flex:none;opacity:.6">'+(x.at?new Date(x.at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'')+'</span>'
+  +'<button class="sm2" style="flex:none" title="Remove this fixture" onclick="dfDel(\''+x.id+'\')">✕</button></div>').join('');
 }
+function dfDel(id){DB.s('docfix',docFixList().filter(x=>x.id!==id));paintDocFix();}
 async function cargoTake(fs){
  const arr=[...fs];
  if(!arr.length)return;
