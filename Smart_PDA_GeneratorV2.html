@@ -1678,7 +1678,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.8.1 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.9.0 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1758,6 +1758,9 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
          either card so it survives regardless of which box did the reading —
          see paintDetected(), fired from each of the three readers below. -->
     <div id="detected" style="display:none"></div>
+    <!-- REVIEW QUEUE — the fields a document read filled in, listed in one
+         place with an approve for each, so nothing machine-filled slips by. -->
+    <div id="revQ" style="display:none"></div>
 
     <!-- No auto-sorting: removed 2026-08-15, the same day it was tried on Home,
          after the user judged the duplication (this card AND Home both offering
@@ -2411,6 +2414,17 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <h3>Keyboard</h3><div class="sm">This is a screen you look at all day — these are the trips worth saving.</div>
   <div class="kgrid" id="kgrid"></div>
   <div class="row" style="justify-content:flex-end;margin-top:18px"><button id="keysClose">Close</button></div>
+</div></div>
+<!-- THE HOLD LIST — last gate before issue. Pending-flagged charges are named
+     one by one; each can be removed on the spot, and printing or exporting
+     continues only once the list has been seen and answered. -->
+<div class="ov mid" id="holdOv"><div class="mbox">
+  <h3>Hold list — charges awaiting confirmation</h3>
+  <div class="sm" id="holdTxt"></div>
+  <div id="holdList" style="margin-top:10px"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:18px">
+    <button id="holdGo" class="p">Issue with these as they stand</button>
+    <button id="holdBack">Go back</button></div>
 </div></div>
 
 <!-- FIRST RUN. Opens once, by itself, when there is no agency name and no saved
@@ -73817,7 +73831,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.8.1';
+const VER='2.9.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -75018,6 +75032,9 @@ const F0={reqType:'',port:'Takoradi',ref:'',callType:'cargo',oilGas:'no',
  docTo:{},docAttn:{},callReason:''};
 
 let S={j:{...F0},cargo:[],ctr:[],ctrSvc:[],off:[],og:{},custom:[],ovr:{},order:{},autoLiner:0,fleet:null,openCargo:0,
+ /* Fields a DOCUMENT read filled in — the review queue lists these, distinct
+    from S.filled, which also carries the defaults a tile pre-set. */
+ docFilled:[],
  /* THE BOX POPULATION — one record per PHYSICAL container, kept whole.
     S.ctr below is the priced view of it, regrouped by boxGroup() whenever
     anything changes. See the block comment at boxGroup() for why both exist. */
@@ -75079,7 +75096,7 @@ function snapshot(){
  return {v:VER,at:new Date().toISOString(),jobId:S.jobId,step:S.step,doc:S.doc,
   j:S.j,cargo:S.cargo,ctr:S.ctr,box:S.box,boxDoc:S.boxDoc,ctrSvc:S.ctrSvc,off:S.off,og:S.og,custom:S.custom,colv:S.colv,
   ovr:S.ovr,order:S.order,pkg:S.pkg,man:S.man,asked:S.asked,openCargo:S.openCargo?1:0,
-  profile:S.profile?S.profile.id:null,filled:S.filled};
+  profile:S.profile?S.profile.id:null,filled:S.filled,docFilled:S.docFilled||[]};
 }
 /* The session snapshot carries the fleet AROUND the per-vessel snapshots, so a
    reload restores every ship — not just the one that happened to be open.
@@ -75150,7 +75167,7 @@ function applySnap(s){
  S.man=s.man||{...S.man};S.asked=s.asked||{};S.openCargo=s.openCargo?1:0;
  S.jobId=s.jobId||uid('j');S.step=s.step||'doc';S.doc=s.doc||'principal';
  S.profile=s.profile?TRADES.find(t=>t.id===s.profile)||null:null;
- S.filled=s.filled||[];
+ S.filled=s.filled||[];S.docFilled=s.docFilled||[];
 }
 /* ── FLEET: several vessels read off one enquiry ───────────────────────────
    A quotation request routinely names two or more ships. Each is a separate
@@ -75253,7 +75270,7 @@ function paintFleet(){
     +'title="'+esc(g.name)+' — switch to its PDA">'+esc(g.name||('Vessel '+(i+1)))
     +'<i onclick="event.stopPropagation();fleetDrop('+i+')" title="Remove this vessel">✕</i></button>').join('')
   +'<button class="fl-all" onclick="fleetPrintAll()" title="Print every vessel\'s principal PDA in one job">Print all</button>'
-  +'<button class="fl-all" onclick="fleetPdfAll()" title="Download every vessel\'s principal PDA as its own one-page PDF file">PDF all</button>';
+  +'<button class="fl-all" onclick="gatePending(fleetPdfAll)" title="Download every vessel\'s principal PDA as its own one-page PDF file">PDF all</button>';
 }
 addEventListener('visibilitychange',()=>{if(document.hidden&&dirty)writeSession();});
 addEventListener('pagehide',()=>{if(dirty)writeSession();});
@@ -78827,7 +78844,7 @@ function render(){
  paintRail();paintGroups();paintColBar();paintFitBar();paintCargo();paintCtr();paintCtrSvc();paintOff();paintOG();
  paintPacking();paintDocs();paintBreak();paintReady();paintAsks();paintAskLock();paintPkLock();paintCtx();
  paintLiner();paintCirc();paintScope();paintBasis();paintCross();paintXDoc();paintDocFix();paintRcv();
- paintBench();paintOgVis();paintFleet();paintDetected();paintExpChg();paintFrozen();
+ paintBench();paintOgVis();paintFleet();paintDetected();paintRevQ();paintExpChg();paintFrozen();
  autoAdvance();
 }
 /* ── selects and lists that depend on state ─────────────────────────────── */
@@ -79112,8 +79129,9 @@ function paintRail(){
      destination. Excel reads the document straight off the screen the way the
      printer does, so columns, order, switches and overrides carry over exactly;
      the PDF is a photograph of the rendered page, one file, every document. */
-  +      '<button class="rail-act" onclick="exportExcel()" title="Download every document of this call as one Excel workbook — a sheet per document">'+ico('download')+' Excel</button>'
-  +      '<button class="rail-act" onclick="exportPdf()" title="Download each document of this call as its own one-page PDF file">'+ico('file')+' PDF</button>'
+  +      '<button class="rail-act" onclick="gatePending(exportExcel)" title="Download every document of this call as one Excel workbook — a sheet per document">'+ico('download')+' Excel</button>'
+  +      '<button class="rail-act" onclick="gatePending(exportPdf)" title="Download each document of this call as its own one-page PDF file">'+ico('file')+' PDF</button>'
+  +      '<button class="rail-act" onclick="gatePending(issuePacket)" title="Download the whole delivery set — the Excel workbook, then every document as its own one-page PDF">'+ico('download')+' Packet</button>'
   +      '<button class="rail-act" onclick="actResetOrder()" title="Put every charge back in tariff order">↕ Order</button>'
   /* COLUMNS SITS WITH THE OTHER DOCUMENT TOOLS, NOT ABOVE THE DOCUMENT. It was a
      permanent bar between the doc selector and the PDA, which pushed the thing
@@ -82907,7 +82925,7 @@ function newJob(){
  S.pkg={raw:[],ov:{},meta:{name:'',hint:null,tot:null,at:''}};S.pkgDoc=null;
  S.lines=[];S.doc='principal';S.step='doc';S.profile=null;S.filled=[];S.frozenAt='';S.frozenTariff='';
  S.man={fee:0,hand:0,liner:0,pilot:0,tugs:0,req:0,oilGas:0};S.asked={};pkLockOff=0;
- S.docs={a:{},c:{},p:{},f:{}};S.cross=null;ready0=null;pkOpen={};S.detCargo=null;
+ S.docs={a:{},c:{},p:{},f:{}};S.cross=null;ready0=null;pkOpen={};S.detCargo=null;S.docFilled=[];
  S.fleet=null;S.autoLiner=0;S.openCargo=0;
  /* THE PREVIOUS DOCUMENT MUST NOT SURVIVE INTO THE NEXT JOB. S.docs was cleared
     here but DETECTED — the "here is what I read" panel — was not, and neither
@@ -85160,8 +85178,10 @@ async function extractAppt(){
    pRejected=String(f.pName);f.pName='';f.pAddr='';f.pAttn='';
   }
   const set=(k,v)=>{if(v!==null&&v!==undefined&&v!=='')({[k]:S.j[k]=v});};
-  S.filled=[];
-  const put=(k,v)=>{if(v===null||v===undefined||v==='')return;S.j[k]=v;S.filled.push(k);};
+  S.filled=[];S.docFilled=[];
+  /* put() also feeds the REVIEW QUEUE — docFilled lists what the letter
+     supplied, so every machine-filled field gets a visible approve. */
+  const put=(k,v)=>{if(v===null||v===undefined||v==='')return;S.j[k]=v;S.filled.push(k);S.docFilled.push(k);};
   const vt=matchVT(f.vtype);if(vt)put('vtype',vt);
   put('vessel',withVesselPrefix(clean(f.vessel),vt));put('imo',clean(f.imo));put('flag',clean(f.flag));
   put('grt',num(f.grt)||'');put('loa',num(f.loa)||'');put('draft',num(f.draft)||'');
@@ -86547,6 +86567,10 @@ function runExample(k){
 function printDoc(){
  const r=readiness();
  if(r.e.length&&!confirm('This PDA still has missing details:\n\n• '+r.e.join('\n• ')+'\n\nPrint anyway?'))return;
+ /* PENDING LINES GET THEIR SAY FIRST — the hold list, then the printer. */
+ gatePending(()=>printNow());
+}
+function printNow(){
  /* A SORT IS A VIEW, AND A VIEW DOES NOT PRINT. The sorted screen is the same
     DOM the printer takes, so without this the document would come out in
     whatever order somebody happened to be reading it — and the notice on screen
@@ -86574,6 +86598,14 @@ function printDoc(){
    The libraries load from a CDN with the rest. If they are not there (offline,
    blocked), the buttons say so plainly. No export ever changes the job. */
 let xBusy=false;
+/* ISSUE PACKET — the whole delivery set in one action: the Excel workbook
+   (a sheet per document) first, then every document as its own one-page PDF.
+   Both exporters keep their own gates, messages and busy flags; the packet
+   only sequences them, with a beat between so the downloads do not collide. */
+async function issuePacket(){
+ await exportExcel();
+ await new Promise(r=>setTimeout(r,900));
+ await exportPdf();}
 function exportGate(){
  if(xBusy){toast('An export is already building — give it a moment.','warn',4000);return false;}
  const r=readiness();
@@ -87285,6 +87317,9 @@ addEventListener('keydown',e=>{
   const s=STEPS.filter(x=>stepShown(x.k))[+e.key-1];if(s){nav('job');go(s.k);}return;}
  if(e.key==='Escape'){
   if($('#cmdk').classList.contains('on')){closeCmd();return;}
+  /* The hold list closes as a decision not to issue — the continuation is
+     dropped. Checked BEFORE the guide: a decision gate outranks help. */
+  if($('#holdOv').classList.contains('on')){holdClose();return;}
   /* The guide closes through closeGuide so Esc records the "don't show me again"
      tick the same way the Close button does. */
   if($('#guideOv').classList.contains('on')){closeGuide();return;}
@@ -87393,11 +87428,75 @@ function docFixRecheck(){
   +(bad.length?'<div class="sm" style="margin-top:6px">Either the rules moved, or the document was read into the wrong lane — the library keeps the lane as the truth until the fixture is cleared.</div>':'');
  toast(bad.length?(bad.length+' fixture(s) misclassified — see the library.'):('Classifier rechecked '+n+' fixture(s) — all agreed.'),bad.length?'err':'ok');
 }
+/* ── REVIEW QUEUE — machine-filled fields, approved in one place ────────
+   A document read fills fields and outlines them teal across the form;
+   scattered outlines are easy to skim past, so the queue lists them here —
+   name, value, approve. Approving accepts the value and lifts the outline;
+   Approve all clears the queue. Only what a DOCUMENT supplied is listed —
+   the defaults a tile pre-set on its own never enter the queue. */
+function paintRevQ(){
+ const e=$('#revQ');if(!e)return;
+ const ks=(S.docFilled||[]).filter(k=>{const el=$('[data-f="'+k+'"]');return el&&String(el.value||'').trim();});
+ if(!ks.length){e.style.display='none';e.innerHTML='';return;}
+ const labelOf=k=>{const el=$('[data-f="'+k+'"]');if(!el||!el.parentElement)return k;
+  const lb=el.parentElement.querySelector('label');if(!lb)return k;
+  let txt='';lb.childNodes.forEach(n=>{if(n.nodeType===3)txt+=n.textContent;});
+  return txt.trim()||k;};
+ e.style.display='';
+ e.innerHTML='<details class="note ok" open style="margin-top:var(--s4)"><summary style="cursor:pointer"><b>'
+  +ks.length+' field'+(ks.length===1?'':'s')+' filled in from the document</b>'
+  +' <span class="sm">— review and approve; the teal outlines on the form mark the same fields.</span></summary>'
+  +'<div style="margin-top:6px">'+ks.map(k=>{const el=$('[data-f="'+k+'"]');
+   return '<div class="row" style="gap:8px;margin-top:4px;align-items:center">'
+   +'<span class="sm" style="flex:1;min-width:0"><b>'+esc(labelOf(k))+'</b></span>'
+   +'<span class="sm" style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(el.value))+'</span>'
+   +'<button class="sm2" style="flex:none" onclick="revApprove(\''+k+'\')">Approve</button></div>';}).join('')+'</div>'
+  +'<div class="row" style="margin-top:8px"><button class="sm2" onclick="revApproveAll()">Approve all</button></div></details>';}
+function revApprove(k){
+ S.docFilled=(S.docFilled||[]).filter(x=>x!==k);
+ S.filled=S.filled.filter(x=>x!==k);
+ const el=$('[data-f="'+k+'"]');if(el)el.classList.remove('fromdoc');
+ markDirty();paintRevQ();}
+function revApproveAll(){
+ (S.docFilled||[]).forEach(k=>{S.filled=S.filled.filter(x=>x!==k);
+  const el=$('[data-f="'+k+'"]');if(el)el.classList.remove('fromdoc');});
+ S.docFilled=[];markDirty();paintRevQ();}
+/* ── THE HOLD LIST — last gate before issue ─────────────────────────────
+   Pending-flagged lines (pre-approval lines, nil-rate services waiting on a
+   quantity, practice lines awaiting the operator's word) are figures the
+   engine is not yet sure of. Printing or exporting with them is still
+   allowed — but never by accident: the hold list names each one, offers a
+   remove on the spot, and only an explicit "Issue with these as they stand"
+   lets the documents go. */
+let holdNext=null;
+const pendingLines=()=>S.lines.filter(i=>i.pending&&!i.off);
+function gatePending(fn){
+ const pl=pendingLines();
+ if(!pl.length){fn();return;}
+ holdNext=fn;paintHold();
+ const o=$('#holdOv');if(o)o.classList.add('on');}
+function paintHold(){
+ const pl=pendingLines(),e=$('#holdList'),t=$('#holdTxt');
+ if(t)t.innerHTML=pl.length
+  ?(pl.length+' charge'+(pl.length===1?'':'s')+' on this call still carry a pending flag — confirm each figure, or remove the line, before issue.')
+  :'';
+ if(e)e.innerHTML=pl.map(i=>'<div class="row" style="gap:8px;margin-top:5px;align-items:center">'
+  +'<span class="sm" style="flex:1;min-width:0">'+esc(i.d)+'</span>'
+  +'<span class="sm" style="flex:none"><b>'+$m(i.amt)+'</b></span>'
+  +'<button class="sm2" style="flex:none" onclick="holdDrop(\''+String(i.id).replace(/'/g,"\\'")+'\')">Remove</button></div>').join('');}
+function holdDrop(id){toggleLine(id);
+ if(!pendingLines().length){holdProceed();return;}
+ paintHold();}
+function holdProceed(){
+ const o=$('#holdOv');if(o)o.classList.remove('on');
+ const f=holdNext;holdNext=null;
+ if(f)f();}
+function holdClose(){const o=$('#holdOv');if(o)o.classList.remove('on');holdNext=null;}
 function paintDocFix(){
  const s=$('#dfSum');const list=docFixList();const n=list.length;
  if(s)s.textContent=n?(' — '+n+' fixture(s) stored; recheck after any rule change.')
   :' — no fixtures yet; every document read becomes one.';
- /* THE LIBRARY MADE VISIBLE (user, 2026-09-05). A count alone is something to
+ /* THE FIXTURE LIBRARY MADE VISIBLE (user, 2026-09-05). A count alone is something to
     trust blindly; a list the operator can read — name, lane, date — and prune
     one entry at a time is something to verify. */
  const e=$('#dfList');if(!e)return;
@@ -87463,6 +87562,7 @@ function boot(){
  $('#exA').onclick=extractAppt;$('#exC').onclick=()=>doCargo();$('#exP').onclick=extractPacking;
  $('#dfRe').onclick=docFixRecheck;
  $('#dfClear').onclick=()=>{if(confirm('Clear the classifier fixture library?')){DB.s('docfix',[]);const r=$('#dfRes');if(r)r.innerHTML='';paintDocFix();}};
+ $('#holdGo').onclick=holdProceed;$('#holdBack').onclick=holdClose;
  $('#addBl').onclick=()=>addCargo();$('#clearBl').onclick=()=>{if(confirm('Clear every cargo line?')){S.cargo=[];S.docs.c={};markDirty();recalc();}};
  $('#confAllBl').onclick=confAllCargo;
  $('#addCtr').onclick=addCtr;$('#addCtrSvc').onclick=addCtrSvc;
