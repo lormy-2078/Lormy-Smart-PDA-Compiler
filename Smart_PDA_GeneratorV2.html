@@ -811,6 +811,10 @@ tr.gt td.num{font:600 13.5px/1.2 'Source Serif 4',Georgia,serif;
 .bank i{display:block;margin-top:7px}
 .off td{color:var(--ink3);text-decoration:line-through}
 .off .ed,.off input,.off select{opacity:.45;text-decoration:line-through}
+/* CHANGE FLASH — the recalculation outlines every line it touched, so one
+   switch shows its blast radius instead of a re-read of the whole sheet. */
+@keyframes flashBg{0%{background:var(--accSoft)}100%{background:transparent}}
+tr.flash>td{animation:flashBg 1.6s ease-out}
 .grip{width:22px;text-align:center;color:var(--ink3);cursor:grab;user-select:none;padding:0 2px!important}
 .grip:hover{color:var(--ink);background:var(--card2)}
 tr.drag{opacity:.4}
@@ -1674,7 +1678,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.8.0 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.8.1 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73813,7 +73817,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.8.0';
+const VER='2.8.1';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -76232,6 +76236,28 @@ function pushOvr(it,f){
  else if(f==='rate'||f==='qty'){p[f]=it[f];delete p.amt;delete p.amtOvr;}
  else p[f]=it[f];
  p.at=new Date().toISOString();S.ovr[it.key]=p;markDirty();}
+/* ── UNDO / REDO — one step back for line-level edits ────────────────────
+   Every line edit persists through three stores — S.ovr (overrides),
+   S.custom (manual lines) and S.og (ordered services) — and compute()
+   re-derives the whole sheet from those stores on every pass. Snapshotting
+   the three before a mutation therefore IS the undo: restore, recompute,
+   and the sheet is exactly as it was. Fifty steps deep; any fresh edit
+   clears the redo branch. */
+let undoStack=[],redoStack=[];
+const editSnap=()=>JSON.stringify({ovr:S.ovr,custom:S.custom,og:S.og});
+function undoPush(){undoStack.push(editSnap());if(undoStack.length>50)undoStack.shift();redoStack.length=0;}
+function undo(){
+ if(!undoStack.length){toast('Nothing to undo.','warn',2200);return;}
+ redoStack.push(editSnap());
+ const s=JSON.parse(undoStack.pop());
+ S.ovr=s.ovr;S.custom=s.custom;S.og=s.og;
+ recalc();toast('Undone.','ok',1800);}
+function redo(){
+ if(!redoStack.length){toast('Nothing to redo.','warn',2200);return;}
+ undoStack.push(editSnap());
+ const s=JSON.parse(redoStack.pop());
+ S.ovr=s.ovr;S.custom=s.custom;S.og=s.og;
+ recalc();toast('Redone.','ok',1800);}
 function relink(){
  S.lines.forEach(t=>{if(t.link&&!t.amtOvr){const b=S.lines.find(x=>x.tag===t.link);
   if(b){t.amt=r2(b.amt*t.taxPct);if(b.off)t.off=true;}}});
@@ -77738,6 +77764,7 @@ function ogNote(i){if(!i||!i.ogsvc)return i;
  else{if(auto)i.cmt=OGNOTORD;i.indic=true;}
  return i;}
 function ogSet(id,f,v){const st=ogState(id);
+ undoPush();
  if(f==='on')st.on=!st.on; else st[f]=num(v);
  if(f==='on'&&st.on&&!(st.qty>0))st.qty=1;
  if(f==='qty'&&st.qty>0)st.on=true;
@@ -78756,7 +78783,31 @@ function askSkip(id){S.asked[id]=1;markDirty();render();}
 
 /* ════════════════ RENDER ═══════════════════════════════════════════════════ */
 let ready0=null;
-function recalc(){boxGroup();compute();render();}
+/* CHANGE FLASH — snapshot the sheet, then after the recompute outline for a
+   moment every line that appeared, disappeared or moved. One switch shows its
+   blast radius instead of a re-read of the whole document. First-ever computes
+   (nothing before) stay quiet, and so do plain navigation renders. */
+let _flashBefore=null;
+function flashArm(){_flashBefore={};S.lines.forEach(i=>{_flashBefore[i.key]={amt:r2(i.amt),off:!!i.off};});}
+function flashFire(){
+ if(!_flashBefore)return;const before=_flashBefore;_flashBefore=null;
+ if(!Object.keys(before).length)return;
+ const keys=new Set();
+ S.lines.forEach(i=>{const b=before[i.key];
+  if(!b){if(!i.off)keys.add(i.key);}
+  else if(b.off!==!!i.off||b.amt!==r2(i.amt))keys.add(i.key);});
+ Object.keys(before).forEach(k=>{if(!S.lines.some(i=>i.key===k))keys.add(k);});
+ if(!keys.size)return;
+ keys.forEach(k=>$$('tr[data-k="'+k.replace(/"/g,'\\"')+'"]').forEach(tr=>tr.classList.add('flash')));
+ clearTimeout(flashFire._ft);
+ flashFire._ft=setTimeout(()=>$$('tr.flash').forEach(tr=>tr.classList.remove('flash')),1700);
+}
+function recalc(){
+ const had=S.lines.length>0;
+ flashArm();
+ boxGroup();compute();render();
+ if(had)flashFire();
+}
 function paintFrozen(){
  const el=$('#frozenNote'); if(!el)return;
  if(!S.frozenAt){el.style.display='none';return;}
@@ -78793,7 +78844,7 @@ function fillStatic(){
  $('#catSel').innerHTML='<option value="">— select —</option>'+Object.keys(CATS).map(k=>'<option value="'+k+'">'+CATS[k]+'</option>').join('');
  $('#kgrid').innerHTML=[[MK+' K','Command palette — steps, actions, trades, saved jobs'],
   [MK+' ↵','Recalculate the PDA'],[MK+' S','Save to the library'],[MK+' P','Print the document on screen'],
-  [MK+' J','Light / dark'],['Alt 1 – 6','Jump to a step'],['?','This sheet'],['Esc','Close anything open']]
+  [MK+' Z','Undo the last charge edit'],['Alt 1 – 6','Jump to a step'],['?','This sheet'],['Esc','Close anything open']]
   .map(([k,d])=>'<kbd>'+k+'</kbd><span>'+d+'</span>').join('');
  /* "CtrlK" ran together and read as one word. */
  $('#kk').textContent=MK+' K';
@@ -81727,6 +81778,7 @@ function pastePlain(e){e.preventDefault();
  document.execCommand('insertText',false,t);}
 function setLine(id,f,v){
  const i=S.lines.find(x=>x.id===id);if(!i)return;
+ undoPush();flashArm();
  if(f==='rate'){
   i.rate=num(v);
   /* AN ORDERED SERVICE'S QUANTITY HAS NO INPUT IN THIS TABLE — row() shows it
@@ -81789,7 +81841,7 @@ function setLine(id,f,v){
  else pushOvr(i,f);
  /* after pushOvr, so the revert record keeps the note as it was before the edit */
  ogNote(i);
- relink();render();markDirty();
+ relink();render();markDirty();flashFire();
 }
 /* Typing a percentage on an estimated-delays line. Routed through setLine's
    'amt' path on purpose: that is the one that records an amtOvr, so the figure
@@ -81824,6 +81876,7 @@ function setTaxPct(id,v){
 }
 function toggleLine(id){
  const i=S.lines.find(x=>x.id===id);if(!i)return;
+ undoPush();flashArm();
  i.off=!i.off;
  /* pushOvr deliberately ignores custom lines, so an off state has to be stored
     on the custom record itself or the line comes straight back on. */
@@ -81832,15 +81885,16 @@ function toggleLine(id){
  if(i.tag)S.lines.forEach(t=>{if(t.id!==i.id&&t.link===i.tag){t.off=i.off;pushOvr(t,'off');}});
  if(/Gangway Watchm/.test(i.d)){const on=S.lines.some(x=>/Gangway Watchm/.test(x.d)&&!x.off);
   S.lines.forEach(t=>{if(t.watch){t.off=!on;pushOvr(t,'off');}});}
- relink();render();markDirty();
+ relink();render();markDirty();flashFire();
 }
 function delLine(id){
  const i=S.lines.find(x=>x.id===id);if(!i)return;
+ undoPush();flashArm();
  if(i.taxOf){const p=S.custom.find(c=>c.cid===i.taxOf);
   if(p){if(/::g$/.test(i.cid||''))p.gf=false;else p.vat=false;}
   markDirty();recalc();return;}
  if(i.custom){S.custom=S.custom.filter(c=>c.cid!==i.cid);markDirty();recalc();return;}
- i.off=true;pushOvr(i,'off');relink();render();
+ i.off=true;pushOvr(i,'off');relink();render();flashFire();
 }
 /* SHIP RELATED ↔ CARGO RELATED, BY DRAG. The user, 2026-08-27: "can you make
    it possible to drag and drop charges between the ship related to cargo
@@ -81851,6 +81905,7 @@ function delLine(id){
 const SEC_DRAG_GROUPS={'p-ship':'ship','p-cargo':'cargo'};
 function setLineSec(id,sec){
  const i=S.lines.find(x=>x.id===id);if(!i||i.sec===sec)return;
+ undoPush();
  i.sec=sec;
  if(i.custom){const c=S.custom.find(x=>x.cid===i.cid);if(c)c.sec=sec;}
  else pushOvr(i,'sec');
@@ -87220,6 +87275,10 @@ addEventListener('keydown',e=>{
  if(mod&&e.key.toLowerCase()==='k'){e.preventDefault();openCmd();return;}
  if(mod&&e.key==='Enter'){e.preventDefault();recalc();toast('Recalculated.','ok');return;}
  if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();saveJob();return;}
+ /* UNDO / REDO for line-level edits — Ctrl+Z steps back, Ctrl+Shift+Z or
+    Ctrl+Y steps forward again. Never while typing in a field. */
+ if(mod&&e.key.toLowerCase()==='z'&&!typing){e.preventDefault();if(e.shiftKey)redo();else undo();return;}
+ if(mod&&e.key.toLowerCase()==='y'&&!typing){e.preventDefault();redo();return;}
  if(mod&&e.key.toLowerCase()==='p'){e.preventDefault();if(view==='job')printDoc();else window.print();return;}
  if(mod&&e.key.toLowerCase()==='j'){e.preventDefault();setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');return;}
  if(e.altKey&&/^[1-6]$/.test(e.key)){e.preventDefault();
