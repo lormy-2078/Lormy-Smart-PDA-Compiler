@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.7.1 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.7.2 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73808,7 +73808,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.7.1';
+const VER='2.7.2';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -87334,25 +87334,18 @@ async function cargoTake(fs){
  if(!arr.length)return;
  if(S.j.cat==='dryBulk'){
   if(arr.length>1)extractCargo(arr);else readFile(arr[0],'c');return;}
- const pk=[],ap=[],rest=[];
- for(const f of arr){const k=await classifyDoc(f);(k==='p'?pk:k==='a'?ap:rest).push(f);}
- if(!pk.length&&!ap.length){
+ const pk=[],rest=[];
+ for(const f of arr){((await classifyDoc(f))==='p'?pk:rest).push(f);}
+ if(!pk.length){
   if(arr.length>1)extractCargo(arr);else readFile(arr[0],'c');return;}
- const moves=[];
- if(pk.length)moves.push('“'+pk[0].name+'” looks like a packing list (lift-by-lift pricing)');
- if(ap.length)moves.push('“'+ap[0].name+'” looks like an agency appointment letter (vessel & principal details)');
- const extras=Math.max(0,pk.length-1)+Math.max(0,ap.length-1);
- const q=confirm(moves.join('\n')+'\n\nRead '+(moves.length>1?'these documents in their own lanes':'the document in its own lane')+' instead?'
-  +(extras?'\n\nMore files of the same kind were detected — the first of each kind moves; the rest stay with the cargo documents.':''));
+ const q=confirm('“'+pk[0].name+'” looks like a packing list (lift-by-lift pricing).\n\nRead it as a packing list instead?'
+  +(pk.length>1?'\n\nMore packing lists were detected — the first moves; the rest stay with the cargo documents.':''));
  if(q){
-  if(pk.length){readFile(pk[0],'p');rest.push(...pk.slice(1));
-   setTimeout(()=>{const b=$('#exP');
-    if(b){b.classList.add('over');setTimeout(()=>b.classList.remove('over'),1400);}},50);
-   toast('Packing list detected — press “Read packing list” below when ready.','ok');}
-  if(ap.length){readFile(ap[0],'a');rest.push(...ap.slice(1));
-   const dza=$('#dzA');if(dza){dza.classList.add('over');setTimeout(()=>dza.classList.remove('over'),1400);}
-   toast('Moved to the appointment letter lane — press “Read appointment letter” when ready.','ok');}
- }else rest.push(...pk,...ap);
+  readFile(pk[0],'p');rest.push(...pk.slice(1));
+  setTimeout(()=>{const b=$('#exP');
+   if(b){b.classList.add('over');setTimeout(()=>b.classList.remove('over'),1400);}},50);
+  toast('Packing list detected — press “Read packing list” below when ready.','ok');
+ }else rest.push(...pk);
  if(rest.length>1)extractCargo(rest);else if(rest.length===1)readFile(rest[0],'c');
 }
 /* ════════════════ WIRING ═══════════════════════════════════════════════════ */
@@ -87467,6 +87460,20 @@ function boot(){
  if(restored){render();toast('Your work was restored from '+restoredAt+' — nothing was lost.','ok',8000);}
  maybeFirstRun();
  /* Fetch the tariff at start-up, not on first visit to the Tariff tab: the
+    ENGINE reads rates from it now, so waiting until someone opens that page
+    would mean the first PDA of a session prices from the constants and a later
+    one from the document. Both give the same figures — rewireRates guarantees
+    that — but "same by luck of timing" is not a property worth relying on.
+    It is a background fetch; nothing blocks on it. */
+ loadTariff();
+ stamp(dirty?'Saving…':'Ready');
+ console.log('%cAutomated PDA Generator v'+VER+' — Designed and under development by Lormy','color:#00a79a;font-weight:700','· '+MK+'K for commands, ? for shortcuts');
+}
+boot();
+</script>
+</body>
+</html>
+isit to the Tariff tab: the
     ENGINE reads rates from it now, so waiting until someone opens that page
     would mean the first PDA of a session prices from the constants and a later
     one from the document. Both give the same figures — rewireRates guarantees
