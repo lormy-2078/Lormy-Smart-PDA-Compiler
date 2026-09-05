@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.3 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.4 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73798,7 +73798,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.4.3';
+const VER='2.4.4';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74559,8 +74559,17 @@ const OGSVC=[{id:'lashW',l:'Lashing / unlashing (weekdays)',r:800,u:'Per shift',
     commodity tally so no call is billed twice. */
  {id:'tally',l:'Tally',r:500,u:'Fixed',src:'MV MPP CLEO',dq:1,gc:1,sec:'others'},
  {id:'craneG',l:'Craneage for general cargo',r:5200,u:'Minimum',src:'MV MPP CLEO',dq:0},
- {id:'hatchQ',l:'Shifting hatch covers via shore',r:223.20,u:'Per unit',src:'MV MPP CLEO',dq:0,gc:1},
- {id:'hatchS',l:'Shifting hatch covers onboard',r:111.60,u:'Per unit',src:'MV MPP CLEO',dq:0,gc:1},
+ /* The two hatch-cover services ARE IN THE TARIFF — Third Schedule G, page 14:
+    3G1001 Shift On Board 123.04 and 3G1002 Shift Via Quay 246.09, both printed
+    "Applicable to container vessels only" (user, 2026-09-05: "shifting hatch
+    covers via onboard and ashore is in the tariffs"). On a container vessel
+    the lines therefore carry the tariff codes and rates through `tr` below.
+    On any other vessel the printed GPHA rows do not apply, and the rates shown
+    are the contractor figures the issued MV MPP CLEO PDA billed (111.60 /
+    223.20) — instructed practice, code '-', kept so a conventional call still
+    sees the two services at a price that actually cleared. */
+ {id:'hatchQ',l:'Shifting hatch covers via shore',r:223.20,u:'Per unit',src:'MV MPP CLEO',dq:0,gc:1,tr:{code:'3G1002',r:246.09}},
+ {id:'hatchS',l:'Shifting hatch covers onboard',r:111.60,u:'Per unit',src:'MV MPP CLEO',dq:0,gc:1,tr:{code:'3G1001',r:123.04}},
  {id:'bunk',l:'Off-hire bunker survey',r:750,u:'Fixed',src:'MV MPP CLEO',dq:0,gc:1},
  {id:'fire',l:'Fire standby',r:130,u:'Per hour',src:'MV MPP CLEO',dq:0},
  {id:'hot',l:'Hot works (welding)',r:0,u:'Fixed',src:'MV MPP CLEO',quote:1,dq:0}];
@@ -76784,12 +76793,16 @@ function compute(){
   const comTally=ls.some(l=>meta(l.cat,l.com).tally);
   list.filter(s=>!(s.id==='tally'&&comTally)).forEach(s=>{
    const ctrDefault=isCtr&&(s.id==='tally'||s.id==='lashW');
-   const st=ogState(s.id,!(og||ctrDefault));
+   /* Hatch-cover shifting carries the Third Schedule G codes and rates only on
+      container vessels — that is the printed applicability of 3G1001/3G1002.
+      Every other vessel keeps the instructed contractor rate of the entry. */
+   const hc=s.tr&&j.vtype==='Container';
+   const st=ogState(s.id,!(og||ctrDefault),hc?s.tr.r:null);
    const q=st.on?num(st.qty):0, amt=r2(st.rate*q);
    /* ogNote runs AFTER add() on purpose — add() is where the agent's override
       lands, and the override key is hashed from the computed cmt, so rewriting
       the note beforehand would orphan their own quantity. */
-   ogNote(add({sec:s.sec||'cargo',code:'-',d:s.l,ogsvc:1,ogId:s.id,
+   ogNote(add({sec:s.sec||'cargo',code:hc?s.tr.code:'-',d:s.l,ogsvc:1,ogId:s.id,
     cmt:q>0?'':OGNOTORD,
     rate:st.rate,unit:s.u,qty:q,amt,payer:op,
     indic:!(q>0),needsQuote:!!(s.quote&&st.on&&!(st.rate>0))}));});}
@@ -77690,12 +77703,12 @@ function billOff(payer){
    `zero` forces every default to nil: the general cargo path passes it so the
    lines are raised for their RATE and UNIT alone and none is priced until the
    agent supplies a quantity. The rate is unaffected — it always shows. */
-function ogState(id,zero){const d=OGSVC.find(s=>s.id===id)||{r:0,dq:0}, c=S.og[id]||{};
+function ogState(id,zero,altR){const d=OGSVC.find(s=>s.id===id)||{r:0,dq:0}, c=S.og[id]||{};
  const touched=Object.prototype.hasOwnProperty.call(S.og,id);
  const dq=zero?0:num(d.dq);
  return{on:touched?!!c.on:(dq>0),
   qty:touched?(c.qty==null?1:num(c.qty)):dq,
-  rate:(touched&&c.rate!=null)?num(c.rate):d.r};}
+  rate:(touched&&c.rate!=null)?num(c.rate):(altR!=null?num(altR):d.r)};}
 /* A listed service flips between "reference" and "billed" on its quantity alone.
    At nil it carries the note and the Indicative chip; the moment the agent enters
    a quantity it is a firm charge and must lose both, or the PDA prints a real

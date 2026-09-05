@@ -193,7 +193,7 @@
       "printed_page": 14,
       "schedule": "Third Schedule: Stevedoring Charges",
       "kind": "engine_note",
-      "note": "3G1001/3G1002 Handling of Hatch Covers — 123.04 on board, 246.09 via quay, applicable to CONTAINER VESSELS ONLY. Distinct from the hatch-cover figures the engine carries as ordered services (111.60 / 223.20), which came from the MV MPP CLEO issued PDA and are contractor rates, not GPHA tariff rates. Both are legitimate; they must not be conflated when the engine is rewired."
+      "note": "3G1001/3G1002 Handling of Hatch Covers — 123.04 on board, 246.09 via quay, applicable to CONTAINER VESSELS ONLY. WIRED 2026-09-05 (v2.4.4, user: 'shifting hatch covers via onboard and ashore is in the tariffs'): on a container vessel the two ordered-service lines carry these codes and rates; on every other vessel they keep the MV MPP CLEO contractor rates (111.60 / 223.20) as instructed practice, code '-' — the tariff rows do not apply there, so the two price bases stay separated rather than conflated."
     },
     {
       "printed_page": 15,
