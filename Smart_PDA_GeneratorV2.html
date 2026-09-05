@@ -711,7 +711,9 @@ body.x-exporting .doc{transform:none!important}
    and puts the figure where the eye has been travelling all along.
    And it is narrower and a size smaller than it was. It is already the only
    thing under a double rule and the only serif figure on the sheet; it does not
-   also need to be large. The user, 2026-09-01: "it shouldn't be too big". */
+   also need to be large. The user, 2026-09-01: "it shouldn't be too big".
+   2026-09-05 follow-up: "increase the grand total payable font just slightly" —
+   so +1px on paper and on screen; still restrained, still the only serif figure. */
 /* Sized to its contents, not to a round number: at a fixed 250px the label broke
    across two lines — "GRAND TOTAL / PAYABLE" — which is a heading stammering. */
 .pf2 .doc .tot-box{width:auto;min-width:230px;max-width:320px;margin:var(--s3) 0 var(--s4) auto}
@@ -786,7 +788,7 @@ tr.gt td{background:none;border:none;border-top:2px solid var(--brandInk);
  color:var(--ink);padding:4px 8px 2px}
 tr.gt td:first-child{font:700 9.5px/1.3 var(--sans);letter-spacing:.11em;
  text-transform:uppercase;color:var(--brandInk)}
-tr.gt td.num{font:600 12.5px/1.2 'Source Serif 4',Georgia,serif;
+tr.gt td.num{font:600 13.5px/1.2 'Source Serif 4',Georgia,serif;
  color:var(--brandInk);font-variant-numeric:tabular-nums}
 /* The total closes the sheet at its printed edge — NOT under the amount
    column: a hand-added column after the money must not leave the total
@@ -1594,7 +1596,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   .tot-box{width:auto;min-width:230px;max-width:340px;margin:6px 0 10px auto;page-break-inside:avoid}.tot-box td{padding:4px 8px}
   .foot{page-break-inside:avoid}
   tr.gt td{font-size:9.5px;padding:4px 8px 2px}
-  tr.gt td.num{font-size:12px}
+  tr.gt td.num{font-size:13px}
   tbody tr:nth-child(even)>td,tbody tr:hover>td{background:#fff!important}
 }
 </style>
@@ -1668,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.4 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.3.5 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73789,7 +73791,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.3.4';
+const VER='2.3.5';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -82013,12 +82015,17 @@ function paintDocs(){
     +'<b>Flag:</b> '+hcell('flag',j.flag,'TBN')+'</span></td></tr>'
   +'<tr><td><span class="kv2"><b>Attn:</b> '+dcell('docAttn',dk,(j.docAttn&&j.docAttn[dk])||attn,'Contact')+'</span>'
     +'</td><td><span class="kv"><b>IMO:</b> '+hcell('imo',j.imo,'TBN')
-    +'<b>GRT:</b> '+hcell('grt',j.grt)+'</span></td></tr>'
+    +'<b>Type:</b> '+hcell('vtype',j.vtype)+'</span></td></tr>'
+  /* TYPE IS BACK — v2.3.5, at the user's clarification: the original "replace
+     type with grt" meant CHANGE PLACES, not delete. So GRT takes Type's old
+     column and Type takes GRT's: Type sits under Flag and above Draft, GRT
+     stays just above LOA. */
   +'<tr><td><span class="kv2"><b>Cargo:</b> '+hcell('cargoTxt',cargo)+'</span>'
-    +'</td><td><span class="kv"><b>LOA:</b> <span class="v">'+hcell('loa',j.loa)+' m</span>'
+    +'</td><td><span class="kv"><b>GRT:</b> '+hcell('grt',j.grt)
     +'<b>Draft:</b> <span class="v">'+hcell('draft',j.draft,'TBN')+(num(j.draft)>0?' m':'')+'</span></span></td></tr>'
   +'<tr><td><span class="kv2"><b>Prov. cargo qty:</b> '+hcell('qtyTxt',qty)+'</span>'
-    +'</td><td><span class="kv"><b>ETA:</b><span class="w3">'+hcell('eta',j.eta,'TBA')+'</span></span></td></tr>'
+    +'</td><td><span class="kv"><b>LOA:</b> <span class="v">'+hcell('loa',j.loa)+' m</span>'
+    +'<b>ETA:</b> <span class="v">'+hcell('eta',j.eta,'TBA')+'</span></span></td></tr>'
   +'<tr><td><span class="kv2"><b>Prov. port stay:</b> <span class="v">'+hcell('stay',j.stay||'0')+' days</span></span></td><td></td></tr>'
   /* Liner terms are an internal routing decision — they settle which document each
      cargo charge lands on. The party reading the PDA does not need them on its
