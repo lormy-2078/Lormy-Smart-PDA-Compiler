@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.2 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.3 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73798,7 +73798,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.4.2';
+const VER='2.4.3';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74245,8 +74245,14 @@ const VEH={
 const VEH_OT={r:2.65,c:'3L1019'};
 const VEH_SHORE_OT={r:1.89};
 const vehUnits=()=>num(S.j.vehSaloon)+num(S.j.vehMini)+num(S.j.vehUtility)+num(S.j.vehTrailer);
+/* THE RORO MACHINERY PERTAINS TO THE RORO TILE (user, 2026-09-05). Vehicle
+   billing and the RoRo practice lines must not leak into the other trades:
+   a job started from the RoRo tile is in scope; a legacy job with no tile is
+   in scope only when the vessel itself is typed RoRo; every other tile is
+   out of scope whatever counts it might carry. */
+const roroScope=()=>S.profile?S.profile.id==='roro':S.j.vtype==='RoRo';
 function billVehicles(dir,liner,payer){
- if(!isCargo())return;
+ if(!isCargo()||!roroScope())return;
  const cls=[['saloon',S.j.vehSaloon],['mini',S.j.vehMini],['utility',S.j.vehUtility],['trailer',S.j.vehTrailer]]
   .map(([k,n])=>({k,n:num(n),v:VEH[k]})).filter(r=>r.n>0);
  if(!cls.length)return;
@@ -77092,13 +77098,14 @@ function mergeCargoSplits(){
  /* ── RORO CALL PRACTICE LINES [TEM26059] ───────────────────────────────
     The only issued RoRo PDA this app holds (TEM26059, MV FLORIDA HIGHWAY)
     closed its stevedoring with a 3% "Estimated delay" provision and carried
-    two lumpsums — Ship Call Fee and Tally — that no GPHA schedule prints.
-    That is what a complete RoRo account looked like in the wild, so a call
-    with vehicles raises all three, flagged pending: likely, not tariff, and
-    one switch each to remove. The delay base is the vehicle + conventional
-    stevedoring only — the issued sheet's 3% ran on 29,543.24 = 599.76 +
-    28,943.48, the overtime lines excluded. */
- if(S.lines.some(i=>String(i.tag||'').indexOf('veh-')===0&&!i.off)){
+    a Tally lumpsum that no GPHA schedule prints. A call with vehicles raises
+    both: the delay as the single agency estimate for the call, the Tally in
+    OTHERS/GENERAL where a counting service belongs (user, 2026-09-05 — not
+    beside the cargo charges). The Ship Call Fee that briefly rode along was
+    removed the same day at the user's instruction. The delay base is the
+    vehicle + conventional stevedoring only — the issued sheet's 3% ran on
+    29,543.24 = 599.76 + 28,943.48, the overtime lines excluded. */
+ if(roroScope()&&S.lines.some(i=>String(i.tag||'').indexOf('veh-')===0&&!i.off)){
   const base=r2(S.lines.filter(i=>!i.off&&(/^3F\d/.test(i.code)||/^3A\d/.test(i.code))).reduce((s,i)=>s+i.amt,0));
   if(base>0){
    /* One agency estimate per call: the RoRo ground truth closes at 3% over the
@@ -77111,13 +77118,10 @@ function mergeCargoSplits(){
   }
   if(!S.lines.some(i=>i.d==='Tally'&&!i.off&&num(i.qty)>0)){
    S.lines.forEach(i=>{if(i.d==='Tally'&&!i.off)i.merged=1;});
-   add({sec:'cargo',code:'-',d:'Tally',
-    cmt:'billed on TEM26059; not a GPHA printed row — switch off if this call does not carry it',
+   add({sec:'others',code:'-',d:'Tally',
+    cmt:'Others / general — billed on TEM26059; not a GPHA printed row, switch off if this call does not carry it',
     rate:500,unit:'Lumpsum',qty:1,amt:500,payer:'principal',pending:true});
   }
-  add({sec:'cargo',code:'-',d:'Ship Call Fee',
-   cmt:'not a GPHA printed row — per TEM26059 practice; switch off if this call does not carry it',
-   rate:1800,unit:'Lumpsum',qty:1,amt:1800,payer:'principal',pending:true});
  }
  S.lines=S.lines.filter(l=>!l.merged);
 }
