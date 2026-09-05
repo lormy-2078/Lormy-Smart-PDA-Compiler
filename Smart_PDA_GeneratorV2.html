@@ -1670,7 +1670,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.4.4 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.5.0 · 05 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1777,7 +1777,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
             <input type="file" id="fA" accept=".pdf,.txt,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.webp"></div>
           <button class="p wide" id="exA"><svg class="ic" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg> Read appointment letter</button></div>
         <div><label class="f">Cargo documents</label>
-          <div class="sm docHelp">Upload cargo manifests, Bills of Lading &amp; Mate receipts to extract/fill in cargo and receiver/shipper details. Add several at once — the system combines them.</div>
+          <div class="sm docHelp">Upload cargo manifests, Bills of Lading &amp; Mate receipts to extract/fill in cargo and receiver/shipper details. Add several at once — the system combines them. A packing list dropped here is detected and offered to the packing list lane.</div>
           <div class="dz" id="dzC"><svg class="ic lg" viewBox="0 0 24 24"><use href="#i-box"/></svg>
             <div>Drop manifests or Bills of Lading here, or <b>choose files</b></div><div class="sm">PDF · Word · Excel · image · text</div>
             <input type="file" id="fC" multiple accept=".pdf,.txt,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.webp"></div>
@@ -73798,7 +73798,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.4.4';
+const VER='2.5.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -87166,11 +87166,60 @@ addEventListener('keydown',e=>{
   const n=l[i+(e.key==='ArrowRight'?1:-1)];if(n){e.preventDefault();go(n.k);}}
 });
 
+/* ── COURTESY ROUTER — packing lists dropped on the cargo-documents lane ──
+   A packing list IS a cargo document in the port sense, but the two lanes are
+   different machines: the cargo lane reads manifests and Bills of Lading, the
+   packing lane prices every package on its own lift. When a file dropped on
+   the cargo lane clearly identifies itself as a packing list, the router asks
+   and moves it to its own lane rather than letting the wrong parser read it
+   silently. The question stays a question: intelligence proposes, the agent
+   disposes. On dry bulk the packing lane stands down, so nothing is probed. */
+async function looksLikePacking(f){
+ if(/\bpack(?:ing)?[\s_\-]?list\b/i.test(f.name))return true;
+ const ext=(f.name.split('.').pop()||'').toLowerCase();
+ let txt='';
+ try{
+  if(ext==='pdf'&&window.pdfjsLib){
+   const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+   for(let p=1;p<=Math.min(2,pdf.numPages);p++){
+    txt+=(await (await pdf.getPage(p)).getTextContent()).items.map(i=>i.str).join(' ')+'\n';}
+  }else if(ext==='txt'||ext==='csv'){txt=(await f.text()).slice(0,16000);}
+  else if((ext==='xlsx'||ext==='xls')&&window.XLSX){
+   const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+   txt=wb.SheetNames.join(' ')+'\n'+wb.SheetNames.map(n=>XLSX.utils.sheet_to_csv(wb.Sheets[n]).slice(0,5000)).join('\n');
+  }else return false;
+ }catch(e){return false;}
+ const t=txt.slice(0,20000);
+ if(!t||!/\bpacking\s*list\b/i.test(t))return false;
+ const sig=['gross\\s*(?:wt|weight)','net\\s*(?:wt|weight)','cbm|cubic','dimension|measurement',
+  'carton|package|pallet|drum|crate|bundle'].filter(r=>new RegExp(r,'i').test(t)).length;
+ return sig>=2;
+}
+async function cargoTake(fs){
+ const arr=[...fs];
+ if(!arr.length)return;
+ if(S.j.cat==='dryBulk'){
+  if(arr.length>1)extractCargo(arr);else readFile(arr[0],'c');return;}
+ const pk=[],rest=[];
+ for(const f of arr){((await looksLikePacking(f))?pk:rest).push(f);}
+ if(!pk.length){
+  if(arr.length>1)extractCargo(arr);else readFile(arr[0],'c');return;}
+ const q=confirm('“'+pk[0].name+'” looks like a packing list rather than a manifest or Bill of Lading.\n\nRead it as a packing list (lift-by-lift pricing) instead?'
+  +(pk.length>1?'\n\n'+pk.length+' packing lists detected — the first moves to the packing lane; the rest stay with the cargo documents.':''));
+ if(q){
+  readFile(pk[0],'p');
+  rest.push(...pk.slice(1));
+  const dzp=$('#dzP');if(dzp){dzp.classList.add('over');setTimeout(()=>dzp.classList.remove('over'),1400);}
+  toast('Moved to the packing list lane — press “Read packing list” when ready.','ok');
+ }else rest.push(...pk);
+ if(rest.length>1)extractCargo(rest);else if(rest.length===1)readFile(rest[0],'c');
+}
 /* ════════════════ WIRING ═══════════════════════════════════════════════════ */
 function dz(dzId,fId,which,multi){
  const d=$('#'+dzId),f=$('#'+fId);if(!d||!f)return;
  const take=fs=>{if(!fs||!fs.length)return;
-  if(multi&&fs.length>1)extractCargo(fs);else readFile(fs[0],which);};
+  if(multi){cargoTake(fs);return;}
+  readFile(fs[0],which);};
  d.onclick=()=>f.click();
  d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('over');});
  d.addEventListener('dragleave',()=>d.classList.remove('over'));
