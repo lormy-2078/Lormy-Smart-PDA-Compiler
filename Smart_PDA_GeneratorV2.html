@@ -526,6 +526,7 @@ td input,td select{height:30px;padding:4px 7px;font-size:var(--f0);border-color:
 .expBadge:empty{display:none}
 .expD{display:flex;flex-direction:column;gap:1px;min-width:0}
 .expWait{font:400 10.5px/1.35 var(--sans);color:var(--ink3)}
+.expCite{font:400 9.5px/1.3 var(--mono);color:var(--infoInk);opacity:.85;letter-spacing:.01em;cursor:help}
 .expRt{display:inline-flex;align-items:baseline;gap:5px;justify-content:flex-end;white-space:nowrap;
   font:550 var(--f0)/1.3 var(--mono);font-variant-numeric:tabular-nums}
 .expRt .u{font:400 9.5px/1.3 var(--sans);color:var(--ink3);letter-spacing:.02em}
@@ -533,7 +534,7 @@ td input,td select{height:30px;padding:4px 7px;font-size:var(--f0);border-color:
 .expRt .ap{color:var(--warnInk)}
 .expRt .amt{color:var(--brandInk);font-weight:700}
 .expRt .est{font:italic 400 10.5px/1.3 var(--sans);color:var(--ink3)}
-.expRt .bs{font:italic 400 10.5px/1.35 var(--sans);color:var(--warnInk);white-space:normal;text-align:right;max-width:230px}
+.expRt .bs{font:italic 400 10.5px/1.35 var(--sans);color:var(--ink2);white-space:normal;text-align:right;max-width:250px}
 .expFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:10px var(--s4) var(--s4);font:400 10.5px/1.45 var(--sans);color:var(--ink3)}
 .expA{padding:0 var(--s4) var(--s4)}
@@ -1723,7 +1724,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.10.1 · 06 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.11.0 · 06 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -2000,7 +2001,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
 
     <div class="grp expChg" id="g-expChg" style="display:none">
       <h3><span class="dot"></span>Expected charges<span class="expBadge" id="expBadge"></span><span class="expHideWrap"><button type="button" class="expHide" onclick="expChgToggle()"></button></span></h3>
-      <div class="expLead">Every line this call would normally carry and what each is charged on — like an Excel template's rows, waiting to be filled in. Rates that depend on the ship's particulars take their figure on entry; nothing here is invented. Once real figures exist this panel becomes the audit of what is actually on the sheet.</div>
+      <div class="expLead">Every line this call would normally carry and what each is charged on — a template of rules, not a sheet of figures. The amounts belong to the PDA, once the real inputs exist. Once real figures exist this panel becomes the audit of what is actually on the sheet.</div>
       <div class="b" id="expChgBody"></div>
     </div>
 
@@ -73876,7 +73877,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.10.1';
+const VER='2.11.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74218,6 +74219,57 @@ const hDir=d=>d==='Export'?'Export':d==='Transhipment'?'Transhipment'
    arrives overland and leaves by sea, so it loads here exactly as an export does —
    which is what decides who bears the handling and what the port column is called. */
 const isLoad=d=>{const x=d===undefined?S.j.dir:d;return x==='Export'||x==='Transit Outbound';};
+/* ═══ DRY BULK CHARGE CONSTITUTION — v2.11 ═══════════════════════════════
+   The dry-bulk cargo block as declarative, cited records. compute() APPLIES
+   these records; the expected-charges panel SHOWS them with their
+   authorities. One source, two readers — expected and actual can never
+   drift apart again. The autonomy is in the APPLICATION: every trigger,
+   rate and bearer rule is stated here as data the engine walks, while the
+   judgments those statements encode stay human — each cite names the clause
+   a person confirmed when the record was written, and practice that lives
+   outside the book (the cocoa terminal contract in euros) carries its own
+   source the same way a tariff row carries its schedule. */
+const DRYCAT=[
+ {id:'stev',t:'Stevedoring — handling method of the call',
+  cite:['Third Schedule 3B — bulk handling lines','Q(5) grabbing / conveyor definition','C(10) grabs & hoppers supplied free by the cargo party'],
+  run:x=>{
+   const h=x.h,hd=hDir(x.dir),sr=h.s[hd],sc=h.c[hd];
+   const cs=x.cm.contract,cu=cs?contractUsd():null;
+   if(cs&&cu!=null)return{sec:'cargo',code:'-',d:'Stevedoring Cost — '+(x.l.com||'cargo')+' (terminal contract)',
+    cmt:x.dTag+' · '+contractNote()+' · GPHA schedule rate would be $'+sr.toFixed(2)+'/t ['+sc+']',
+    rate:cu,unit:'Per tonne',qty:x.l.qty,amt:r2(cu*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk};
+   return{sec:'cargo',code:sc,d:'GPHA Stevedoring Cost ('+handLabel(h,x.dir)+')',cmt:x.dTag,
+    rate:sr,unit:'Per tonne',qty:x.l.qty,amt:r2(sr*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk};}},
+ {id:'extra',t:'Handling extra — bagging machine on BIBO',
+  cite:['Third Schedule 3C — BIBO','Q(4) Bulk In, Bagged Out'],
+  run:x=>x.h.extra?{sec:'cargo',code:x.h.extra.c,d:x.h.extra.d,cmt:x.dTag,rate:x.h.extra.r,
+   unit:'Per tonne',qty:x.l.qty,amt:r2(x.h.extra.r*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk}:null},
+ {id:'ot',t:'Stevedoring Labour Overtime',
+  /* The Ninth Schedule prices oil & gas cargo handling comprehensively — no
+     overtime section exists under it at all (C.1–C.7 cover transfer, lashing,
+     delays, extra services and labour hire, never overtime) — so a Third
+     Schedule overtime line here would be a different schedule’s rate applied
+     on top of a scale that already prices the call. The user, 2026-08-13:
+     "stevedoring labour overtime is not applicable to oil and gas related
+     cargo". Same guard as the packing-list path. */
+  cite:['Third Schedule L — labour overtime','E(1) labour charges scope','Ninth Schedule — no OT section (oil & gas excluded)'],
+  when:x=>!x.dv&&!isOG(),
+  run:x=>({sec:'cargo',code:x.h.otc,d:'Stevedoring Labour Overtime',cmt:x.tag,rate:x.h.ot,
+   unit:'Per tonne',qty:x.l.qty,amt:r2(x.h.ot*x.l.qty),payer:x.payer,rcv:x.l.rcv,pending:true,dk:x.dk})},
+ {id:'delay',t:'Estimated Labour Delays',
+  cite:['operating practice — estimated delays on the stevedoring','TEM26059 reconstruction (3% on the working cost)'],
+  when:x=>!x.dv,
+  run:x=>{const sr=x.h.s[hDir(x.dir)];
+   return{sec:'cargo',code:'-',d:'Estimated Labour Delays',cmt:'1% · '+x.tag,
+    rate:r2(x.l.qty*sr*x.P.delay),unit:'Estimate',qty:1,amt:r2(x.l.qty*sr*x.P.delay),
+    delayPct:x.P.delay,delayBase:r2(x.l.qty*sr),payer:x.payer,rcv:x.l.rcv,pending:true,dk:x.dk};}}
+];
+/* CITE HELPERS for the shared lines a dry-bulk (or any bulk) parcel carries —
+   the authorities travel with the line into the expected panel. */
+const duesCite=(dir,red)=>['First Schedule 1B — commodity port-dues row']
+ .concat(red?[(dir&&dir.indexOf('Tranship')===0?'B(6)':'B(12)')+' — 60% of dues on transhipment / transit']:[]);
+const CLEAN_CITE=['First Schedule 1G — general port cleaning','Q(11) dirty cargoes definition'];
+const GSA_CITE=['GSA schedule — General / Containerised line, direction-split'];
 
 /* Third Schedule D — liquid bulk handling, per tonne, by delivery method */
 const LIQ={pipeline:{l:'Pipeline to tank farm / terminal',
@@ -76690,9 +76742,10 @@ function compute(){
   const cqN=plRev!=null?' · on the revenue tons (higher of weight or measurement) [C(1)]':'';
   const og=isOG()?(OG.cargoDues[l.cat]||OG.cargoDues.general):null;
   if(og)add({sec:'cargo',code:og.c,d:'Port Dues on Cargo ('+(l.com||'')+')',
-   cmt:'Ninth Schedule 9A.2 oil & gas scale'+cqN+' · '+dTag,rate:og.r,unit:cu,qty:cq,amt:r2(og.r*cq),payer:pdP,rcv:pdR,dk});
+   cmt:'Ninth Schedule 9A.2 oil & gas scale'+cqN+' · '+dTag,cite:['Ninth Schedule 9A.2 — oil & gas cargo dues'],
+   rate:og.r,unit:cu,qty:cq,amt:r2(og.r*cq),payer:pdP,rcv:pdR,dk});
   else if(pd)add({sec:'cargo',code:pdCode(cm,dir),d:'Port Dues on Cargo ('+(l.com||'')+')',
-   cmt:dTag+(pdN?' · '+pdN:'')+cqN,
+   cmt:dTag+(pdN?' · '+pdN:'')+cqN,cite:duesCite(dir,pdF<1),
    rate:pd,unit:cu,qty:cq,amt:r2(pd*cq),payer:pdP,rcv:pdR,dk});
   /* GATE FEE [9A.3] — oil & gas only, and on the same basis and bearer as the
      port dues it sits beside on the issued receiver PDA. */
@@ -76754,31 +76807,16 @@ function compute(){
       rate:ot.r,unit:'Per tonne / CBM',qty:otq,amt:r2(ot.r*otq),payer,rcv:l.rcv,pending:true,dk});}}
   }
   else if(l.cat==='dryBulk'){
-   const h=HAND[j.handling]||HAND.grabbing, hd=hDir(dir), sr=h.s[hd], sc=h.c[hd];
-   const cs=cm.contract, cu=cs?contractUsd():null;
-   if(cs&&cu!=null)
-    add({sec:'cargo',code:'-',d:'Stevedoring Cost — '+(l.com||'cargo')+' (terminal contract)',
-     cmt:dTag+' · '+contractNote()+' · GPHA schedule rate would be $'+sr.toFixed(2)+'/t ['+sc+']',
-     rate:cu,unit:'Per tonne',qty:l.qty,amt:r2(cu*l.qty),payer:cP,rcv:cR,dk});
-   else add({sec:'cargo',code:sc,d:'GPHA Stevedoring Cost ('+handLabel(h,dir)+')',cmt:dTag,
-    rate:sr,unit:'Per tonne',qty:l.qty,amt:r2(sr*l.qty),payer:cP,rcv:cR,dk});
-   if(h.extra)add({sec:'cargo',code:h.extra.c,d:h.extra.d,cmt:dTag,rate:h.extra.r,unit:'Per tonne',
-    qty:l.qty,amt:r2(h.extra.r*l.qty),payer:cP,rcv:cR,dk});
-   if(!dv){
-    /* The Ninth Schedule prices oil & gas cargo handling comprehensively — no
-       overtime section exists under it at all (C.1–C.7 cover transfer, lashing,
-       delays, extra services and labour hire, never overtime) — so a Third
-       Schedule B/C overtime line here would be a different schedule's rate
-       applied on top of a scale that already prices the call. The packing-list
-       path already guards this (`if(!ogc)`); dry bulk oil & gas cargo did not.
-       The user, 2026-08-13: "stevedoring labour overtime is not applicable to
-       oil and gas related cargo". */
-    if(!isOG())add({sec:'cargo',code:h.otc,d:'Stevedoring Labour Overtime',cmt:tag,rate:h.ot,unit:'Per tonne',
-     qty:l.qty,amt:r2(h.ot*l.qty),payer,rcv:l.rcv,pending:true,dk});
-    add({sec:'cargo',code:'-',d:'Estimated Labour Delays',cmt:'1% · '+tag,rate:r2(l.qty*sr*P.delay),
-     unit:'Estimate',qty:1,amt:r2(l.qty*sr*P.delay),
-     delayPct:P.delay,delayBase:r2(l.qty*sr),
-     payer,rcv:l.rcv,pending:true,dk});}
+   /* THE CONSTITUTION APPLIES ITSELF. The records above are the single
+      source for these lines — the expected panel reads the same records,
+      so what the operator is promised before entry is what the desk
+      computes after it. */
+   const h=HAND[j.handling]||HAND.grabbing;
+   const x={j,dir,l,cm,dv,cP,cR,dk,tag,dTag,payer,P,h};
+   DRYCAT.forEach(rec=>{
+    if(rec.when&&!rec.when(x))return;
+    const o=rec.run(x);
+    if(o)add(Object.assign({cite:rec.cite},o));});
   }
   else if(l.cat==='bagged'||l.cat==='unitised'||l.cat==='genBreakbulk'){
    const dg=!!cm.dg, un=!!cm.unitised, tier=j.bagDG==='DangerousII'?'II':'I';
@@ -76845,7 +76883,7 @@ function compute(){
     qty:l.qty,amt:r2(LIQD.fire.r*l.qty),payer:cP,rcv:cR,dk});
   }
   if(cm.dirty)add({sec:'cargo',code:'1G1001',d:'General Port Cleaning Dues (dry bulk / dirty cargo)',cmt:dTag,
-   rate:P.clean,unit:'Per tonne',qty:l.qty,amt:r2(P.clean*l.qty),payer:cP,rcv:cR,dk});
+   cite:CLEAN_CITE,rate:P.clean,unit:'Per tonne',qty:l.qty,amt:r2(P.clean*l.qty),payer:cP,rcv:cR,dk});
  });
 
  billContainers(dir,liner,payer);
@@ -77093,7 +77131,7 @@ function compute(){
   const gp=cargoBearer(liner), q=num(line.qty), gr=gsaRate(cm,dir);
   add({sec:'cargo',code:'GSA',d:'Ghana Shippers Authority Levy',
    cmt:'['+(line.bl||'-')+'] '+(line.com||'cargo')+(cm.gsaExempt?' · on the GSA exemption list — switch off if a Certificate of Exemption applies':''),
-   rate:gr,unit:'Per tonne',qty:q,amt:r2(gr*q),payer:gp,rcv:line.rcv,dk:docKey(line)});});
+   cite:GSA_CITE,rate:gr,unit:'Per tonne',qty:q,amt:r2(gr*q),payer:gp,rcv:line.rcv,dk:docKey(line)});});
  /* Containers carry the same levy on the same basis, so it takes the same bearer
     — passing `payer` here would have left boxes on the handling switch while
     every other cargo moved to the levy rule. */
@@ -78286,7 +78324,7 @@ const expSig=()=>[S.j.cat,S.j.com,S.j.dir,S.j.liner,S.j.port,S.j.callType,S.j.oi
    tariff line; lines without a code match on the number-stripped description. */
 const expCk=l=>(l.sec||'')+'\u001f'+(l.code&&l.code!=='-'?l.code:kt(l.d));
 const expHarvest=ls=>ls.filter(l=>!l.off&&!l.merged).map(l=>({ck:expCk(l),sec:l.sec,payer:l.payer,
- d:l.d,code:l.code,indic:!!l.indic,pending:!!l.pending,rate:l.rate,unit:l.unit,qty:l.qty,amt:l.amt,custom:!!l.custom}));
+ d:l.d,code:l.code,indic:!!l.indic,pending:!!l.pending,rate:l.rate,unit:l.unit,qty:l.qty,amt:l.amt,custom:!!l.custom,cite:l.cite||null}));
 function expWait(l){
  const d=l.d||'';
  if(/Shifting/.test(d))return 'figures enter once shifting moves are named';
@@ -78297,8 +78335,8 @@ function expWait(l){
  if(l.est)return 'estimate — moves with the confirmed stevedoring';
  if(l.indic)return 'raised only if it applies to this call';
  if(l.pending)return 'confirm the port stay and it firms up';
- if(l.flat)return 'fixed charge — amount is genuine';
- if(!l.fixed)return 'charged on the ship’s particulars — figure on entry';
+ if(l.flat)return 'amount enters with the job — nothing is assumed';
+ if(!l.fixed)return 'figure enters with the ship’s particulars';
  return '';
 }
 function expectedSet(){
@@ -78384,24 +78422,35 @@ function expAudit(){
 }
 let expChgDismissed=false;
 function expChgToggle(){expChgDismissed=!expChgDismissed;paintExpChg();}
-const expRf=r=>String(Math.round(num(r)*10000)/10000);   /* 0.095 stays 0.095 */
-/* WHAT IT IS CHARGED ON, NOT A NUMBER THE PLACEHOLDER INVENTED. A rate that
-   moved between the probe passes is band-bracketed on the ship's particulars;
-   the honest thing to print is the basis — per movement, per day, a GRT-band
-   minimum — and leave the figure to the real entry. */
+/* THE EXPECTED PANEL IS A TEMPLATE OF RULES, NOT A SHEET OF FIGURES. Every
+   line states WHAT THE CHARGE IS CHARGED ON and where its rate lives; no
+   number prints here at all — not the tariff rate (it depends on commodity,
+   direction, band and handling), not the agency's own fee (a setting, not a
+   tariff), nothing. The figures belong to the PDA, once real inputs exist.
+   The intelligence is in WHICH lines appear for the trade and call, and in
+   the basis each one carries. */
 const expBasis=l=>{
- const u=(l.unit||'').toLowerCase();
- if(u==='minimum')return 'GRT-band minimum — amount on entry';
+ const u=(l.unit||'').toLowerCase(), sec=l.sec||'', d=l.d||'';
+ if(l.est)return 'estimate — a percentage of the stevedoring';
  if(u==='movements')return 'per movement — rate by GRT band';
- if(u==='days')return 'per day — rate by GRT band';
- return (l.unit||'')+' — rate by the ship’s particulars';
+ if(u==='days')return 'per day in port — rate by GRT band';
+ if(u==='minimum')return 'a GRT-band minimum';
+ if(u==='per grt')return 'per GRT of the vessel';
+ if(u==='per grt/day')return 'per GRT per day at anchorage';
+ if(u==='per hour')return 'per hour — hours follow the port stay';
+ if(u==='%')return 'a percentage of the charge it rides on';
+ if(u==='per man hour')return 'per man-hour deployed';
+ if(u==='lumpsum'){
+  if(/Agency|Admin|Release/.test(d))return 'lumpsum — the agency’s own charge, set at the desk';
+  if(/Survey/.test(d))return 'lumpsum — where the cargo is weighed by draft';
+  return 'lumpsum — amount on entry';}
+ if(u==='per tonne'){
+  if(sec==='cargo')return 'per tonne of cargo — rate by commodity, direction & handling';
+  return 'per tonne — the rate enters with the job';}
+ if(u==='per tonne / cbm')return 'per tonne or CBM — the higher, per C(1)';
+ return (l.unit||'')+' — rate on entry';
 };
-const expRateCell=l=>{
- if(l.est)return '<span class="expRt"><span class="est">estimate</span></span>';
- if(!l.fixed)return '<span class="expRt"><span class="bs" title="Band-bracketed on the ship’s particulars — priced on entry">'+esc(expBasis(l))+'</span></span>';
- if(l.flat)return '<span class="expRt"><span class="amt">'+$m(l.amt)+'</span></span>';
- return '<span class="expRt"><span class="fx">'+expRf(l.rate)+'</span><span class="u">'+esc(l.unit||'')+'</span></span>';
-};
+const expRateCell=l=>'<span class="expRt"><span class="bs">'+esc(expBasis(l))+'</span></span>';
 function paintExpChg(){
  const el=$('#g-expChg');if(!el)return;
  const btn=el.querySelector('.expHide'),lead=el.querySelector('.expLead'),badge=$('#expBadge');
@@ -78420,11 +78469,13 @@ function paintExpChg(){
  let h='';
  if(!real){
   if(lead)lead.innerHTML='Every line this call would normally carry, <b>with the published tariff rates</b> — like an Excel template’s rows, waiting to be filled in. '
-   +'Charges whose rate is band-bracketed on the ship’s particulars state what they are charged on and take their figure on entry — nothing here is invented. Nothing here is a commitment.';
+   +'No figures print here — each line states what the charge is charged on and where its rate lives. The amounts belong to the PDA, once the real inputs exist. Nothing here is a commitment.';
   if(badge)badge.textContent='';
   const grp=(label,rows)=>!rows.length?'':('<div class="expGrp">'+esc(label)+'</div>'
    +rows.map(r=>'<div class="expRow'+(r.indic?' ind':'')+'"><span class="expCode">'+esc(r.code&&r.code!=='-'?r.code:'')+'</span>'
-    +'<span class="expD">'+esc(r.d)+(r.wait?'<span class="expWait">'+esc(r.wait)+'</span>':'')+'</span>'
+    +'<span class="expD">'+esc(r.d)
+     +(r.cite&&r.cite.length?'<span class="expCite" title="'+esc(r.cite.join(' · '))+'">'+esc(r.cite[0])+(r.cite.length>1?' +'+(r.cite.length-1):'')+'</span>':'')
+     +(r.wait?'<span class="expWait">'+esc(r.wait)+'</span>':'')+'</span>'
     +expRateCell(r)+'</div>').join(''));
   /* ISPS and PIDD are levied per tonne of CARGO — on the expected-charges
      panel they belong to the cargo group, even though the issued PDA keeps
@@ -78477,13 +78528,11 @@ async function printChargePlan(){
  const col=(rows,title)=>{
   if(!rows.length)return '';
   return '<h4>'+esc(title)+'</h4><table class="cptab"><thead><tr><th>Code</th><th>Description</th>'
-   +'<th>Basis</th><th class="num">Rate ($)</th><th class="num">Amount ($)</th><th>Note</th></tr></thead><tbody>'
+   +'<th>Charged on</th><th>Note</th></tr></thead><tbody>'
    +rows.map(l=>'<tr><td class="c-c">'+esc(l.code&&l.code!=='-'?l.code:'—')+'</td>'
     +'<td class="c-d">'+esc(l.d)+'</td>'
-    +'<td>'+esc(l.est?'Estimate':(l.unit||''))+'</td>'
-    +'<td class="num">'+(l.est?'—':(l.fixed?expRf(l.rate):''))+'</td>'
-    +'<td class="num">'+(l.flat?$m(l.amt):'—')+'</td>'
-    +'<td class="c-m">'+esc(l.indic?'if applicable':(l.fixed?(l.flat?'fixed charge':''):expBasis(l)))+'</td></tr>').join('')
+    +'<td>'+esc(expBasis(l))+'</td>'
+    +'<td class="c-m">'+esc((l.cite&&l.cite.length?l.cite.join(' · '):'')+(l.indic?' · if applicable':''))+'</td></tr>').join('')
    +'</tbody></table>';};
   const grpFor=p=>lines.filter(l=>l.payer===p).sort((a,b)=>((a.code==='1J1001'||a.code==='1K1001')?1:0)-((b.code==='1J1001'||b.code==='1K1001')?1:0));
  const holder=document.createElement('div');
@@ -78501,7 +78550,7 @@ async function printChargePlan(){
   +'<td><span class="kv"><b>GRT / LOA:</b> '+(num(j.grt)>0?esc(j.grt):'TBN')+' / '+(num(j.loa)>0?esc(j.loa):'TBN')+'</span></td></tr></table>'
   +col(grpFor('principal'),'Principal’s PDA — expected lines')
   +col(grpFor('receiver'),party().full+'’s PDA — expected lines')
-  +'<div class="sm cpNote">Rates are the published tariff. ≈ re-derives from the ship’s particulars once entered; amounts appear only where fixed. '
+  +'<div class="sm cpNote">A template of the charges this call will carry and what each is charged on — the figures enter with the job. '
   +'A plan, not a commitment — the PDA itself is issued from the live figures.</div>'
   +'</div>';
  document.body.appendChild(holder);

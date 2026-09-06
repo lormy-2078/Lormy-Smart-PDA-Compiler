@@ -187,3 +187,33 @@ User review of v2.10 in the live app, three corrections, all accepted as doctrin
 3. **ISPS and PIDD are per tonne of cargo — cargo-related charges.** On the expected-charges panel (and the charge plan) they now sit under Cargo related; the issued PDA keeps its house layout untouched.
 
 Verified headless: pilotage basis-only, light dues 0.095 fixed, environmental basis-only with no fake amount, ISPS/PIDD under Cargo related, zero ≈ in the panel, 9-tile sweep clean. Pushed as v2.10.1.
+
+## v2.11.0 — the charge constitution & the fully generic expected panel (06 Sep 26)
+
+Two moves, one doctrine.
+
+**1. The dry-bulk cargo block is now a declarative, cited catalog (DRYCAT).**
+Stevedoring (schedule or terminal contract), the BIBO bagging extra, stevedoring
+overtime (with the Ninth-Schedule oil & gas exclusion) and estimated labour
+delays are stated as records — trigger, basis, bearer, cites — that compute()
+walks; the expected panel reads the same records. Port dues, cleaning and the
+GSA levy carry cite metadata into the panel (1B + B(6)/B(12), 1G + Q(11), the
+GSA direction-split schedule). Proof: 12 dry-bulk scenarios (all handling
+methods, directions, ports, liner terms, the cocoa EUR contract, the bauxite
+to-ship directive, B.6/B.12 transhipment & transit, BIBO, oil & gas exclusion)
+snapshotted before and after the refactor — **bit-identical line sheets**.
+
+**2. The expected panel prints NO figures at all — it is a template of rules.**
+User, reviewing v2.10.1: "agency fee should be generic... expected charges
+should be generic or general - intelligently displayed by the application".
+Every line now states only WHAT IT IS CHARGED ON ("per movement — rate by GRT
+band", "per tonne of cargo — rate by commodity, direction & handling",
+"lumpsum — the agency's own charge, set at the desk", "a percentage of the
+charge it rides on") plus its cite chip and its condition note. The tariff
+rates and amounts stay in the engine's data layer (the audit and the PDA use
+them) but never print on the preview. The charge plan prints the same generic
+table — Code / Description / Charged on / Note — one A4 page.
+
+The intelligence is in WHICH lines appear for the trade and call, and in the
+basis each carries; the figures belong to the PDA once real inputs exist.
+Mirror, not motor — unchanged.
