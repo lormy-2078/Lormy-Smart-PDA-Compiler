@@ -177,3 +177,13 @@ The expected-charges preview (user, 2026-08-28: "see the charges like their Exce
 5. **Printable charge plan.** One A4 page in the PDA's own paper look — both documents, code/description/basis/rate/amount/note, amounts only where fixed. Refuses once real figures exist (the PDA itself is then the document). File: CHARGEPLAN_<ref> Principal.pdf via the existing captureOnePdf pipeline.
 
 Verified headless (verify_exp.js): preview rates correct (4.63 grabbing fixed, pilotage ≈, fee $3,600 flat); BIBO switch updates live; audit clean baseline then flags exactly the switched stevedoring line + the hand line and its two tax twins ("4 flagged"); charge plan PDF one A4 page with real content. 9-tile sweep: zero errors, all features present. Pronoun sweep over the new block: clean.
+
+### v2.10.1 — expected charges print basis, not invented figures (06 Sep 26)
+
+User review of v2.10 in the live app, three corrections, all accepted as doctrine:
+
+1. **No placeholder-derived numbers, not even marked ≈.** The ≈ rates were computed off the 10,000-GRT placeholder and looked precise — exactly what this app must never print. The second probe pass is now deliberately extreme (250,000 GRT / 399 m LOA) so EVERY band-bracketed figure proves itself ship-particular (the environmental minimum read $1,942.50 at both old probe points yet is bracketed; it is now basis-only). Band-bracketed lines print WHAT THEY ARE CHARGED ON: "per movement — rate by GRT band", "per day — rate by GRT band", "GRT-band minimum — amount on entry". Only genuinely fixed published figures keep numbers (per-tonne cargo rates, GSA levy, per-GRT light dues, true lumpsums).
+2. **Rate formatting bug:** the preview rounded 0.095 light dues to 0.10. New formatter keeps four decimals (0.095 prints 0.095). User: "a very bad mistake — check for the correct rate".
+3. **ISPS and PIDD are per tonne of cargo — cargo-related charges.** On the expected-charges panel (and the charge plan) they now sit under Cargo related; the issued PDA keeps its house layout untouched.
+
+Verified headless: pilotage basis-only, light dues 0.095 fixed, environmental basis-only with no fake amount, ISPS/PIDD under Cargo related, zero ≈ in the panel, 9-tile sweep clean. Pushed as v2.10.1.

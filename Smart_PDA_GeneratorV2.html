@@ -533,6 +533,7 @@ td input,td select{height:30px;padding:4px 7px;font-size:var(--f0);border-color:
 .expRt .ap{color:var(--warnInk)}
 .expRt .amt{color:var(--brandInk);font-weight:700}
 .expRt .est{font:italic 400 10.5px/1.3 var(--sans);color:var(--ink3)}
+.expRt .bs{font:italic 400 10.5px/1.35 var(--sans);color:var(--warnInk);white-space:normal;text-align:right;max-width:230px}
 .expFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:10px var(--s4) var(--s4);font:400 10.5px/1.45 var(--sans);color:var(--ink3)}
 .expA{padding:0 var(--s4) var(--s4)}
@@ -1722,7 +1723,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.10.0 · 06 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.10.1 · 06 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1999,7 +2000,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
 
     <div class="grp expChg" id="g-expChg" style="display:none">
       <h3><span class="dot"></span>Expected charges<span class="expBadge" id="expBadge"></span><span class="expHideWrap"><button type="button" class="expHide" onclick="expChgToggle()"></button></span></h3>
-      <div class="expLead">Every line this call would normally carry, with the published tariff rates — like an Excel template's rows, waiting to be filled in. Nothing here is a commitment. Once real figures exist this panel becomes the audit of what is actually on the sheet.</div>
+      <div class="expLead">Every line this call would normally carry and what each is charged on — like an Excel template's rows, waiting to be filled in. Rates that depend on the ship's particulars take their figure on entry; nothing here is invented. Once real figures exist this panel becomes the audit of what is actually on the sheet.</div>
       <div class="b" id="expChgBody"></div>
     </div>
 
@@ -73875,7 +73876,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.10.0';
+const VER='2.10.1';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -78297,7 +78298,7 @@ function expWait(l){
  if(l.indic)return 'raised only if it applies to this call';
  if(l.pending)return 'confirm the port stay and it firms up';
  if(l.flat)return 'fixed charge — amount is genuine';
- if(!l.fixed)return 're-derives from the ship’s particulars on entry';
+ if(!l.fixed)return 'charged on the ship’s particulars — figure on entry';
  return '';
 }
 function expectedSet(){
@@ -78325,8 +78326,12 @@ function expectedSet(){
   const a=expHarvest(S.lines);
   /* Second pass on different particulars: whatever rate moves is
      ship-particular and gets the ≈ treatment in the preview. */
-  S.j.grt=(num(S.j.grt)||10000)>45000?r2(num(S.j.grt)/3):63000;
-  S.j.loa=(num(S.j.loa)||150)>240?r2(num(S.j.loa)*0.55):310;
+  /* Deliberately extreme: the point is to cross EVERY band the tariff draws on
+     GRT / LOA, so a minimum or movement rate that sits inside one band at the
+     placeholder still proves itself band-bracketed (the environmental minimum
+     reads $1,942.50 at both 10,000 and 63,000 GRT yet moves between other
+     bands — it is not a fixed charge and must not print as one). */
+  S.j.grt=250000;S.j.loa=399;
   if(num(S.j.draft)>0)S.j.draft=r2(num(S.j.draft)+4.2);
   compute();
   const b={};expHarvest(S.lines).forEach(l=>{b[l.ck]=l;});
@@ -78379,12 +78384,23 @@ function expAudit(){
 }
 let expChgDismissed=false;
 function expChgToggle(){expChgDismissed=!expChgDismissed;paintExpChg();}
+const expRf=r=>String(Math.round(num(r)*10000)/10000);   /* 0.095 stays 0.095 */
+/* WHAT IT IS CHARGED ON, NOT A NUMBER THE PLACEHOLDER INVENTED. A rate that
+   moved between the probe passes is band-bracketed on the ship's particulars;
+   the honest thing to print is the basis — per movement, per day, a GRT-band
+   minimum — and leave the figure to the real entry. */
+const expBasis=l=>{
+ const u=(l.unit||'').toLowerCase();
+ if(u==='minimum')return 'GRT-band minimum — amount on entry';
+ if(u==='movements')return 'per movement — rate by GRT band';
+ if(u==='days')return 'per day — rate by GRT band';
+ return (l.unit||'')+' — rate by the ship’s particulars';
+};
 const expRateCell=l=>{
  if(l.est)return '<span class="expRt"><span class="est">estimate</span></span>';
- const rs=num(l.rate).toFixed(2);
+ if(!l.fixed)return '<span class="expRt"><span class="bs" title="Band-bracketed on the ship’s particulars — priced on entry">'+esc(expBasis(l))+'</span></span>';
  if(l.flat)return '<span class="expRt"><span class="amt">'+$m(l.amt)+'</span></span>';
- if(!l.fixed)return '<span class="expRt"><span class="ap" title="Ship-particular rate — re-derives from GRT / LOA on entry">≈ '+rs+'</span><span class="u">'+esc(l.unit||'')+'</span></span>';
- return '<span class="expRt"><span class="fx">'+rs+'</span><span class="u">'+esc(l.unit||'')+'</span></span>';
+ return '<span class="expRt"><span class="fx">'+expRf(l.rate)+'</span><span class="u">'+esc(l.unit||'')+'</span></span>';
 };
 function paintExpChg(){
  const el=$('#g-expChg');if(!el)return;
@@ -78404,14 +78420,18 @@ function paintExpChg(){
  let h='';
  if(!real){
   if(lead)lead.innerHTML='Every line this call would normally carry, <b>with the published tariff rates</b> — like an Excel template’s rows, waiting to be filled in. '
-   +'≈ marks a rate that re-derives from the ship’s particulars once entered; amounts show only where fixed. Nothing here is a commitment.';
+   +'Charges whose rate is band-bracketed on the ship’s particulars state what they are charged on and take their figure on entry — nothing here is invented. Nothing here is a commitment.';
   if(badge)badge.textContent='';
   const grp=(label,rows)=>!rows.length?'':('<div class="expGrp">'+esc(label)+'</div>'
    +rows.map(r=>'<div class="expRow'+(r.indic?' ind':'')+'"><span class="expCode">'+esc(r.code&&r.code!=='-'?r.code:'')+'</span>'
     +'<span class="expD">'+esc(r.d)+(r.wait?'<span class="expWait">'+esc(r.wait)+'</span>':'')+'</span>'
     +expRateCell(r)+'</div>').join(''));
-  const shipP=lines.filter(l=>l.payer==='principal'&&l.sec==='ship');
-  const cargoP=lines.filter(l=>l.payer==='principal'&&(l.sec==='cargo'||l.sec==='othersR'));
+  /* ISPS and PIDD are levied per tonne of CARGO — on the expected-charges
+     panel they belong to the cargo group, even though the issued PDA keeps
+     them on the ship side by house layout. */
+  const cargoLevy=l=>l.code==='1J1001'||l.code==='1K1001';
+  const shipP=lines.filter(l=>l.payer==='principal'&&l.sec==='ship'&&!cargoLevy(l));
+  const cargoP=lines.filter(l=>l.payer==='principal'&&((l.sec==='cargo'||l.sec==='othersR')||cargoLevy(l)));
   const otherP=lines.filter(l=>l.payer==='principal'&&l.sec==='others');
   const cargoR=lines.filter(l=>l.payer==='receiver'&&l.sec==='cargo');
   const otherR=lines.filter(l=>l.payer==='receiver'&&l.sec==='othersR');
@@ -78461,11 +78481,11 @@ async function printChargePlan(){
    +rows.map(l=>'<tr><td class="c-c">'+esc(l.code&&l.code!=='-'?l.code:'—')+'</td>'
     +'<td class="c-d">'+esc(l.d)+'</td>'
     +'<td>'+esc(l.est?'Estimate':(l.unit||''))+'</td>'
-    +'<td class="num">'+(l.est?'—':((l.fixed?'':'≈ ')+num(l.rate).toFixed(2)))+'</td>'
+    +'<td class="num">'+(l.est?'—':(l.fixed?expRf(l.rate):''))+'</td>'
     +'<td class="num">'+(l.flat?$m(l.amt):'—')+'</td>'
-    +'<td class="c-m">'+esc(l.indic?'if applicable':(l.flat?'fixed charge':(l.fixed?'':'re-priced from the ship’s particulars on entry')))+'</td></tr>').join('')
+    +'<td class="c-m">'+esc(l.indic?'if applicable':(l.fixed?(l.flat?'fixed charge':''):expBasis(l)))+'</td></tr>').join('')
    +'</tbody></table>';};
-  const grpFor=p=>lines.filter(l=>l.payer===p);
+  const grpFor=p=>lines.filter(l=>l.payer===p).sort((a,b)=>((a.code==='1J1001'||a.code==='1K1001')?1:0)-((b.code==='1J1001'||b.code==='1K1001')?1:0));
  const holder=document.createElement('div');
  holder.className='pda';holder.setAttribute('data-d','principal');
  holder.innerHTML='<div class="doc">'
