@@ -165,3 +165,15 @@ Health sweep on v2.9.0 before further feature work; results:
 5. **Open judgment call:** the first-run guide overlay prose is written in a conversational second-person voice (~8 pronoun uses); left as-is pending an explicit decision that the house rule extends to guide narration.
 
 Verified: `node --check` clean; 9-tile audit re-run after edits — zero errors; shifting/anchorage indicative guarantee re-confirmed. Pushed as `8f8eea8`.
+
+## Expected charges — v2.10.0 (06 Sep 26)
+
+The expected-charges preview (user, 2026-08-28: "see the charges like their Excel before making entries") completed into its full shape:
+
+1. **Cache-staleness fix.** The probe cache key now carries every field that can change the line set (handling method, berth, bag/DG/crane modes, liquid method, container terminal/THC mode, real figure values). Found live: switching Grabbing→BIBO never refreshed the preview.
+2. **Rates in the preview.** The probe keeps the rates it used to discard. A second compute pass on different vessel particulars classifies each line: rates that do not move are fixed tariff figures (printed plain); rates that move are ship-particular (printed ≈ — and the tariff's own CODE BAND moves with them, e.g. Pilotage 2A2001 → 2A2007 across GRT brackets, which is how the classifier caught them); Lumpsum/Minimum lines of qty 1 print their genuine AMOUNT (agency fee $3,600, draft survey $1,200). Estimates stay estimates. No amount is ever invented.
+3. **Expected-vs-actual audit.** Once real figures exist the panel becomes an audit: the engine-alone expected set (probe runs with overrides, customs and ordered services emptied) checked against the computed sheet. Flagged and named: lines switched off, lines missing, lines added by hand (code CUSTOM), lines renamed/re-keyed. Internal merge twins excluded; switched-off lines consume one expected slot so a line is never flagged both off and missing. Badge on the card header counts the flags.
+4. **Dependency notes.** Per-line annotations: shifting/anchorage wait for their figures, craneage prices only when deployed, GSA levy notes the Certificate of Exemption, draft survey notes the draft-vs-counted rule, pending lines note the port stay.
+5. **Printable charge plan.** One A4 page in the PDA's own paper look — both documents, code/description/basis/rate/amount/note, amounts only where fixed. Refuses once real figures exist (the PDA itself is then the document). File: CHARGEPLAN_<ref> Principal.pdf via the existing captureOnePdf pipeline.
+
+Verified headless (verify_exp.js): preview rates correct (4.63 grabbing fixed, pilotage ≈, fee $3,600 flat); BIBO switch updates live; audit clean baseline then flags exactly the switched stevedoring line + the hand line and its two tax twins ("4 flagged"); charge plan PDF one A4 page with real content. 9-tile sweep: zero errors, all features present. Pronoun sweep over the new block: clean.

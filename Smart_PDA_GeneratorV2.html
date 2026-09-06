@@ -520,6 +520,50 @@ td input,td select{height:30px;padding:4px 7px;font-size:var(--f0);border-color:
 .expD{color:var(--ink)}
 .expRow.ind .expD{color:var(--ink3)}
 .expTag{font:400 10.5px/1.3 var(--sans);color:var(--ink3);font-style:italic;white-space:nowrap}
+/* v2.10 — rates in the preview, the audit, the charge plan */
+.expBadge{margin-left:8px;font:700 10px/1 var(--sans);letter-spacing:.05em;color:var(--warnInk);
+  background:var(--warnSoft,rgba(176,122,16,.14));border:1px solid var(--warnLine);border-radius:20px;padding:3px 8px}
+.expBadge:empty{display:none}
+.expD{display:flex;flex-direction:column;gap:1px;min-width:0}
+.expWait{font:400 10.5px/1.35 var(--sans);color:var(--ink3)}
+.expRt{display:inline-flex;align-items:baseline;gap:5px;justify-content:flex-end;white-space:nowrap;
+  font:550 var(--f0)/1.3 var(--mono);font-variant-numeric:tabular-nums}
+.expRt .u{font:400 9.5px/1.3 var(--sans);color:var(--ink3);letter-spacing:.02em}
+.expRt .fx{color:var(--ink)}
+.expRt .ap{color:var(--warnInk)}
+.expRt .amt{color:var(--brandInk);font-weight:700}
+.expRt .est{font:italic 400 10.5px/1.3 var(--sans);color:var(--ink3)}
+.expFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px var(--s4) var(--s4);font:400 10.5px/1.45 var(--sans);color:var(--ink3)}
+.expA{padding:0 var(--s4) var(--s4)}
+.expA .aGrp{border:1px solid var(--line);border-left-width:3px;border-radius:var(--r1);
+  padding:8px 10px;margin-top:10px;background:var(--card2)}
+.expA .aGrp:first-child{margin-top:2px}
+.expA .aGrp.warn{border-color:var(--warnLine);border-left-color:var(--warn)}
+.expA .aGrp.bad{border-color:var(--badLine);border-left-color:var(--bad)}
+.expA .aGrp.info{border-color:var(--infoLine);border-left-color:var(--info)}
+.expA .aGrp.ok{border-color:var(--okLine);border-left-color:var(--ok)}
+.expA .aTl{font:700 11px/1.3 var(--sans);letter-spacing:.03em;margin-bottom:4px}
+.expA .aGrp.warn .aTl{color:var(--warnInk)}
+.expA .aGrp.bad .aTl{color:var(--badInk)}
+.expA .aGrp.info .aTl{color:var(--infoInk)}
+.expA .aGrp.ok .aTl{color:var(--okInk)}
+.expA .aNt{font:400 10.5px/1.3 var(--sans);color:var(--ink3);text-transform:none;letter-spacing:0}
+.expA .ait{display:grid;grid-template-columns:56px 1fr;gap:10px;padding:3.5px 0;
+  border-top:1px solid var(--line);font:400 var(--f0)/1.3 var(--sans)}
+.expA .ait:first-of-type{border-top:0}
+.expA .aic{color:var(--ink3);font:400 11px/1.3 var(--mono)}
+.expA .aid{color:var(--ink)}
+/* Charge plan paper table */
+.doc .cptab{width:100%;border-collapse:collapse;margin:4px 0 10px}
+.doc .cptab th{font:700 9px/1.3 var(--sans);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);text-align:left;padding:4px 6px;border-bottom:1.5px solid var(--brandInk)}
+.doc .cptab td{padding:4px 6px;border-bottom:1px solid var(--paperLine);font-size:11.5px;vertical-align:top}
+.doc .cptab td.c-c{font:400 10px/1.3 var(--pfMono);color:#33405a;white-space:nowrap}
+.doc .cptab td.c-d{font-weight:600}
+.doc .cptab td.c-m{color:#5d6a7d;font-size:10.5px}
+.doc .cptab td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--pfMono);white-space:nowrap}
+.doc .cpNote{margin-top:10px;padding-top:8px;border-top:1px solid var(--paperLine);color:#5d6a7d;line-height:1.5}
 .sub{font:700 var(--f0)/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;
   color:var(--ink3);margin:var(--s4) 0 var(--s2);padding-bottom:5px;border-bottom:1px solid var(--line)}
 .sub:first-child{margin-top:0}
@@ -1678,7 +1722,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.9.1 · 05 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.10.0 · 06 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1954,8 +1998,8 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
     </div><!-- /.gpair -->
 
     <div class="grp expChg" id="g-expChg" style="display:none">
-      <h3><span class="dot"></span>Expected charges<span class="expHideWrap"><button type="button" class="expHide" onclick="expChgToggle()"></button></span></h3>
-      <div class="expLead">Every line a call like this normally carries, before a single figure is entered — like an Excel template's rows, waiting to be filled in. Nothing here is a commitment; it updates as soon as GRT, LOA, quantity or liner terms change, and steps aside once there is enough to price for real.</div>
+      <h3><span class="dot"></span>Expected charges<span class="expBadge" id="expBadge"></span><span class="expHideWrap"><button type="button" class="expHide" onclick="expChgToggle()"></button></span></h3>
+      <div class="expLead">Every line this call would normally carry, with the published tariff rates — like an Excel template's rows, waiting to be filled in. Nothing here is a commitment. Once real figures exist this panel becomes the audit of what is actually on the sheet.</div>
       <div class="b" id="expChgBody"></div>
     </div>
 
@@ -73831,7 +73875,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.9.1';
+const VER='2.10.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -78179,13 +78223,21 @@ function cargoScenarioPrincipal(list){
  finally{ S.cargo=saveCargo; S.lines=saveLines; S.j=saveJ; }
 }
 /* EXPECTED CHARGES — WHAT THE PDA WILL CONTAIN, BEFORE THERE IS ENOUGH TO
-   PRICE IT. The user, 2026-08-28: "aim is for a user to see the charges,
-   like they would their excel before they even start making entries."
-   Same probe technique as cargoScenarioPrincipal above, carried further:
-   placeholder vessel and cargo figures run through the REAL compute(), then
-   every rate/qty/amount is discarded and only the line SET survives. A
-   hand-written checklist per commodity would drift from the engine the
-   first time a rate or a rule changed; running the engine itself never can.
+   PRICE IT, AND WHAT IT SHOULD STILL CONTAIN AFTER. The user, 2026-08-28:
+   "aim is for a user to see the charges, like they would their excel before
+   they even start making entries." Same probe technique as
+   cargoScenarioPrincipal above, carried further: placeholder vessel and
+   cargo figures run through the REAL compute(). A hand-written checklist per
+   commodity would drift from the engine the first time a rate or a rule
+   changed; running the engine itself never can.
+
+   v2.10 kept the rates the old version threw away — fixed tariff rates print
+   plain, ship-particular rates print as ≈ (proved by a second probe pass on
+   different particulars), lumpsum/minimum lines print their genuine amount —
+   and turned the preview into an AUDIT once real figures exist: the same
+   engine set checked against the computed sheet, naming anything switched
+   off, missing or added by hand. And the whole thing prints as a one-page
+   CHARGE PLAN for pre-entry circulation.
 
    Needs commodity, direction AND liner terms — liner terms is what decides
    which DOCUMENT a cargo levy lands on (principal or receiver), and that
@@ -78194,73 +78246,265 @@ function cargoScenarioPrincipal(list){
    this just for display?" It was, in the mockup; here it is not — a levy
    that would land on the receiver's own PDA is grouped there, live, off the
    same `cargoBearer()`/liner-terms logic the real pro forma uses. */
-let EXP_SIG=null, EXP_CACHE=null;
-function expectedCharges(){
- /* A RoRo call may carry NO commodity at all — only units — so the commodity
-    gate opens for vehicle calls too; the preview then lists the ship lines and
-    the vehicle quintet off the same engine that prices them for real. */
- const veh=vehUnits()>0;
- if(!isCargo()||!S.j.cat||(!S.j.com&&!veh)||!S.j.dir||!S.j.liner)return null;
- /* Once real numbers exist the real pro forma is the ground truth, not this
-    — it steps aside rather than sit beside a document saying the same
-    thing with invented figures. */
- const hasReal=num(S.j.grt)>0&&num(S.j.loa)>0
-   &&(S.cargo.length||num(S.j.qty)>0||(S.ctr||[]).some(l=>num(l.n)>0)||veh);
- if(hasReal)return null;
- const sig=[S.j.cat,S.j.com,S.j.dir,S.j.liner,S.j.port,S.j.callType,S.j.oilGas,vehUnits()].join('');
- if(sig===EXP_SIG)return EXP_CACHE;
- const saveJ=JSON.parse(JSON.stringify(S.j)), saveLines=S.lines, saveCargo=S.cargo, saveCtr=S.ctr;
+let EXP_SIG=null,EXP_CACHE=null;
+/* THE EXPECTED SET HAS TWO LIVES NOW (v2.10). Before real figures exist it is
+   the preview — every line the call will carry, WITH ITS PUBLISHED RATE. Once
+   real figures exist it becomes the audit: the same engine-derived set,
+   checked against what is actually on the sheet, so a charge switched off,
+   dropped or added by hand is named instead of disappearing quietly.
+
+   The set is ALWAYS derived from the engine alone: the probe runs compute()
+   with the override, custom and ordered-service stores emptied, so user edits
+   never leak into the expectation they are about to be measured against.
+
+   Rates split three ways by a two-pass probe — compute once on the real or
+   placeholder particulars, once on deliberately different ones. Whatever rate
+   does not move is a fixed tariff figure and is printed plain; whatever moves
+   is ship-particular (pilotage brackets, light dues, harbour rent…) and is
+   printed as ≈ until the particulars exist. Lumpsum and minimum lines with a
+   quantity of one show their AMOUNT — that figure is genuine, not projected. */
+const expHasReal=()=>{const veh=vehUnits()>0;
+ return num(S.j.grt)>0&&num(S.j.loa)>0
+  &&(S.cargo.length||num(S.j.qty)>0||(S.ctr||[]).some(l=>num(l.n)>0)||veh);};
+const expReady=()=>{const veh=vehUnits()>0;
+ return isCargo()&&S.j.cat&&(S.j.com||veh)&&S.j.dir&&S.j.liner;};
+/* THE CACHE KEY CARRIES EVERY FIELD THAT CAN CHANGE THE LINE SET. The first
+   version listed only cat/com/dir/liner/port/callType/oilGas — so switching a
+   dry bulk call from Grabbing to BIBO (which adds Bagging Machine Operations)
+   or naming a concession berth left the preview showing the stale set until
+   something else disturbed the cache. Found on the v2.10 pass. */
+const expSig=()=>[S.j.cat,S.j.com,S.j.dir,S.j.liner,S.j.port,S.j.callType,S.j.oilGas,
+ S.j.handling,S.j.berth,S.j.bagMode,S.j.bagDG,S.j.bagLift,S.j.bagCrane,S.j.bagCraneN,
+ S.j.liquidMethod,S.j.ctrTerminal,S.j.thcMode,
+ num(S.j.grt),num(S.j.loa),num(S.j.stay),num(S.j.qty),
+ S.cargo.length,(S.ctr||[]).filter(l=>num(l.n)>0).length,vehUnits()].join('\u001f');
+/* The AUDIT matching key is deliberately coarser than the engine's own line
+   key: the probe prices a call before receivers are named and before B/L tags
+   exist, so rcv and the B/L tag cannot take part in matching, and a receiver
+   typed later must not make every line look new. Section + code identifies a
+   tariff line; lines without a code match on the number-stripped description. */
+const expCk=l=>(l.sec||'')+'\u001f'+(l.code&&l.code!=='-'?l.code:kt(l.d));
+const expHarvest=ls=>ls.filter(l=>!l.off&&!l.merged).map(l=>({ck:expCk(l),sec:l.sec,payer:l.payer,
+ d:l.d,code:l.code,indic:!!l.indic,pending:!!l.pending,rate:l.rate,unit:l.unit,qty:l.qty,amt:l.amt,custom:!!l.custom}));
+function expWait(l){
+ const d=l.d||'';
+ if(/Shifting/.test(d))return 'figures enter once shifting moves are named';
+ if(/Anchorage/.test(d))return 'figures enter once anchorage days are named';
+ if(/Craneage/.test(d))return 'priced when a crane is deployed — listed at nil when the ship’s own gear works the cargo';
+ if(/Shippers Authority/.test(d))return 'switched off against a Certificate of Exemption';
+ if(/Draft Survey/.test(d))return 'raised where cargo is weighed by draft, not counted';
+ if(l.est)return 'estimate — moves with the confirmed stevedoring';
+ if(l.indic)return 'raised only if it applies to this call';
+ if(l.pending)return 'confirm the port stay and it firms up';
+ if(l.flat)return 'fixed charge — amount is genuine';
+ if(!l.fixed)return 're-derives from the ship’s particulars on entry';
+ return '';
+}
+function expectedSet(){
+ if(!expReady())return null;
+ const sig=expSig();
+ if(sig===EXP_SIG&&EXP_CACHE)return EXP_CACHE;
+ const saveJ=JSON.parse(JSON.stringify(S.j)),saveLines=S.lines,saveCargo=S.cargo,saveCtr=S.ctr,
+   saveOvr=S.ovr,saveCustom=S.custom,saveOg=S.og,saveMan=JSON.parse(JSON.stringify(S.man));
  let out=null;
  try{
-  S.j.grt=num(S.j.grt)||10000; S.j.loa=num(S.j.loa)||150; S.j.stay=num(S.j.stay)||1;
+  /* THE ENGINE ALONE. Overrides, hand lines and ordered services are what the
+     audit measures AGAINST the expectation, so none of them may shape it. */
+  S.ovr={};S.custom=[];S.og={};
+  S.j.grt=num(S.j.grt)||10000;S.j.loa=num(S.j.loa)||150;S.j.stay=num(S.j.stay)||1;
   if(S.j.cat==='containers'){
    if(!(S.ctr||[]).some(l=>num(l.n)>0))
-    /* t:1 is a placeholder tonnage only — this preview never prints an amount
-       (see the map below), it only has to make billCtrGSA()'s num(l.t)>0
-       gate pass so the GSA line shows up as a line the call will carry. */
+    /* t:1 is a placeholder tonnage only — it exists to let billCtrGSA()'s
+       num(l.t)>0 gate pass so the GSA line shows up as a line the call will
+       carry. The preview prints rates, and it never prints a fake amount. */
     S.ctr=[{id:'x',size:'20',physSize:'20',cls:'gen',mv:S.j.dir||'Import',n:1,teu:1,t:1,rcv:''}];
-  }else if(S.j.com||!veh){
+  }else if(S.j.com||vehUnits()===0){
    S.j.qty=num(S.j.qty)||1;
   }
   compute();
-  out=S.lines.filter(l=>!l.off).map(l=>({sec:l.sec,payer:l.payer,d:l.d,code:l.code,indic:!!l.indic}));
- }catch(e){ out=null; }
- finally{ S.j=saveJ; S.lines=saveLines; S.cargo=saveCargo; S.ctr=saveCtr; }
- EXP_SIG=sig; EXP_CACHE=out;
+  const a=expHarvest(S.lines);
+  /* Second pass on different particulars: whatever rate moves is
+     ship-particular and gets the ≈ treatment in the preview. */
+  S.j.grt=(num(S.j.grt)||10000)>45000?r2(num(S.j.grt)/3):63000;
+  S.j.loa=(num(S.j.loa)||150)>240?r2(num(S.j.loa)*0.55):310;
+  if(num(S.j.draft)>0)S.j.draft=r2(num(S.j.draft)+4.2);
+  compute();
+  const b={};expHarvest(S.lines).forEach(l=>{b[l.ck]=l;});
+  out=a.map(l=>{
+   const q=b[l.ck],
+     est=l.unit==='Estimate',
+     flat=!est&&(l.unit==='Lumpsum'||l.unit==='Minimum')&&num(l.qty)===1,
+     /* q missing means the line's own code band moved between the two passes
+        (2A2001 → 2A2007 as GRT crosses a bracket) — that IS ship-particular
+        behaviour, so an unmatched line is never counted as stable. */
+     fixed=!est&&(q?(num(q.rate)===num(l.rate)&&(!flat||num(q.amt)===num(l.amt))):false);
+   l.est=est;l.flat=flat;l.fixed=fixed;l.wait=expWait(Object.assign({},l,{est,flat,fixed}));
+   return l;});
+ }catch(e){out=null;}
+ finally{S.j=saveJ;S.lines=saveLines;S.cargo=saveCargo;S.ctr=saveCtr;
+  S.ovr=saveOvr;S.custom=saveCustom;S.og=saveOg;S.man=saveMan;}
+ EXP_SIG=sig;EXP_CACHE=out;
  return out;
 }
+/* EXPECTED-VS-ACTUAL — the audit the preview grows into once real figures
+   exist. A line switched off, a line missing, a line added by hand: each is
+   named. "A charge dropped by the machine is a charge nobody checked" — this
+   is the check. Internal merge twins (merged=1) are machine bookkeeping and
+   never count; custom lines are the user's own and are reported as such. */
+function expAudit(){
+ const exp=expectedSet();
+ if(!exp)return null;
+ const expC={};exp.forEach(l=>{expC[l.ck]=(expC[l.ck]||0)+1;});
+ const matched={},offSeen={};
+ const off=[],added=[],changed=[];
+ S.lines.forEach(l=>{
+  if(l.merged)return;
+  const ck=expCk(l);
+  if(l.off){if(expC[ck])offSeen[ck]=(offSeen[ck]||0)+1;return;}
+  if((expC[ck]||0)>(matched[ck]||0)){matched[ck]=(matched[ck]||0)+1;return;}
+  if(l.custom)added.push(l);else changed.push(l);
+ });
+ const missing=[];
+ Object.keys(expC).forEach(k=>{
+  const m=matched[k]||0, o=offSeen[k]||0, ex=exp.find(l=>l.ck===k);
+  if(!ex)return;
+  /* A line switched off is flagged whatever else is present — that is the
+     whole point of the audit. It also CONSUMES one expected slot, so a
+     call is never flagged both "switched off" and "missing" for the same
+     line; missing is reserved for lines with no trace on the sheet at all. */
+  for(let i=0;i<o;i++)off.push(ex);
+  if(m+o<expC[k])missing.push(ex);
+ });
+ return{exp,off,added,changed,missing};
+}
 let expChgDismissed=false;
-function expChgToggle(){ expChgDismissed=!expChgDismissed; paintExpChg(); }
+function expChgToggle(){expChgDismissed=!expChgDismissed;paintExpChg();}
+const expRateCell=l=>{
+ if(l.est)return '<span class="expRt"><span class="est">estimate</span></span>';
+ const rs=num(l.rate).toFixed(2);
+ if(l.flat)return '<span class="expRt"><span class="amt">'+$m(l.amt)+'</span></span>';
+ if(!l.fixed)return '<span class="expRt"><span class="ap" title="Ship-particular rate — re-derives from GRT / LOA on entry">≈ '+rs+'</span><span class="u">'+esc(l.unit||'')+'</span></span>';
+ return '<span class="expRt"><span class="fx">'+rs+'</span><span class="u">'+esc(l.unit||'')+'</span></span>';
+};
 function paintExpChg(){
- const el=$('#g-expChg'); if(!el)return;
- const btn=el.querySelector('.expHide');
+ const el=$('#g-expChg');if(!el)return;
+ const btn=el.querySelector('.expHide'),lead=el.querySelector('.expLead'),badge=$('#expBadge');
+ const real=expHasReal(), lines=real?null:expectedSet(), aud=real?expAudit():null;
+ const usable=real?(aud&&aud.exp&&aud.exp.length):(lines&&lines.length);
  if(expChgDismissed){
   el.style.display='';
-  if(btn){btn.textContent='Show';btn.title='Show the expected-charges preview again';}
-  $('#expChgBody').innerHTML='';
-  el.querySelector('.expLead').style.display='none';
+  if(btn){btn.textContent='Show';btn.title='Show the expected-charges panel again';}
+  $('#expChgBody').innerHTML='';if(lead)lead.style.display='none';if(badge)badge.textContent='';
   return;
  }
- const lines=expectedCharges();
- if(!lines||!lines.length){el.style.display='none';return;}
+ if(!usable){el.style.display='none';return;}
  el.style.display='';
- el.querySelector('.expLead').style.display='';
- if(btn){btn.textContent='Hide';btn.title='Hide this preview for now';}
- const shipP=lines.filter(l=>l.payer==='principal'&&l.sec==='ship');
- const cargoP=lines.filter(l=>l.payer==='principal'&&(l.sec==='cargo'||l.sec==='othersR'));
- const otherP=lines.filter(l=>l.payer==='principal'&&l.sec==='others');
- const cargoR=lines.filter(l=>l.payer==='receiver'&&l.sec==='cargo');
- const otherR=lines.filter(l=>l.payer==='receiver'&&l.sec==='othersR');
- const grp=(label,rows)=>!rows.length?'':('<div class="expGrp">'+esc(label)+'</div>'
+ if(btn){btn.textContent='Hide';btn.title='Hide this panel for now';}
+ if(lead)lead.style.display='';
+ let h='';
+ if(!real){
+  if(lead)lead.innerHTML='Every line this call would normally carry, <b>with the published tariff rates</b> — like an Excel template’s rows, waiting to be filled in. '
+   +'≈ marks a rate that re-derives from the ship’s particulars once entered; amounts show only where fixed. Nothing here is a commitment.';
+  if(badge)badge.textContent='';
+  const grp=(label,rows)=>!rows.length?'':('<div class="expGrp">'+esc(label)+'</div>'
    +rows.map(r=>'<div class="expRow'+(r.indic?' ind':'')+'"><span class="expCode">'+esc(r.code&&r.code!=='-'?r.code:'')+'</span>'
-     +'<span class="expD">'+esc(r.d)+'</span>'
-     +(r.indic?'<span class="expTag">if applicable</span>':'')+'</div>').join(''));
- let h='<div class="expDoc"><h5>Principal’s PDA</h5>'
-  +grp('Ship related',shipP)+grp('Cargo related',cargoP)+grp('Others',otherP)+'</div>';
- if(cargoR.length||otherR.length)
-  h+='<div class="expDoc"><h5>'+esc(party().full)+'’s PDA</h5>'+grp('Cargo related',cargoR)+grp('Others',otherR)+'</div>';
+    +'<span class="expD">'+esc(r.d)+(r.wait?'<span class="expWait">'+esc(r.wait)+'</span>':'')+'</span>'
+    +expRateCell(r)+'</div>').join(''));
+  const shipP=lines.filter(l=>l.payer==='principal'&&l.sec==='ship');
+  const cargoP=lines.filter(l=>l.payer==='principal'&&(l.sec==='cargo'||l.sec==='othersR'));
+  const otherP=lines.filter(l=>l.payer==='principal'&&l.sec==='others');
+  const cargoR=lines.filter(l=>l.payer==='receiver'&&l.sec==='cargo');
+  const otherR=lines.filter(l=>l.payer==='receiver'&&l.sec==='othersR');
+  h='<div class="expDoc"><h5>Principal’s PDA</h5>'
+   +grp('Ship related',shipP)+grp('Cargo related',cargoP)+grp('Others',otherP)+'</div>';
+  if(cargoR.length||otherR.length)
+   h+='<div class="expDoc"><h5>'+esc(party().full)+'’s PDA</h5>'+grp('Cargo related',cargoR)+grp('Others',otherR)+'</div>';
+  h+='<div class="expFoot"><span>Amounts appear once the figures do — the plan prints without amounts.</span>'
+   +'<button type="button" class="sm2" onclick="printChargePlan()">Print charge plan</button></div>';
+ }else{
+  const n=aud.off.length+aud.missing.length+aud.added.length+aud.changed.length;
+  if(lead)lead.innerHTML='The engine’s expected line set, checked against the sheet as computed. '
+   +(n?'Every deviation is named below — switch a line back on, or be sure it should differ.':
+       'Nothing switched off, nothing missing, nothing added by hand.');
+  if(badge)badge.textContent=n?(n+' flagged'):'';
+  const item=l=>'<div class="ait"><span class="aic">'+esc(l.code&&l.code!=='-'?l.code:'—')+'</span>'
+   +'<span class="aid">'+esc(l.d)+'</span></div>';
+  const grp=(cls,label,rows,note)=>!rows.length?'':'<div class="aGrp '+cls+'"><div class="aTl">'+esc(label)
+   +(note?' <span class="aNt">'+note+'</span>':'')+'</div>'+rows.map(item).join('')+'</div>';
+  h='<div class="expA">'
+   +(n?grp('warn','Switched off',aud.off,'expected by the engine, off on the sheet')
+       +grp('bad','Missing',aud.missing,'expected by the engine, not on the sheet at all')
+       +grp('info','Added by hand',aud.added,'the engine never raises these')
+       +grp('info','Changed from the engine line',aud.changed,'renamed or re-keyed')
+     :'<div class="aGrp ok"><div class="aTl">Every expected charge accounted for</div></div>')
+   +'</div>';
+ }
  $('#expChgBody').innerHTML=h;
 }
+/* THE CHARGE PLAN — the preview, printed. One A4 page, the app's own paper
+   look, both documents, rates only (amounts only where fixed). It exists for
+   the pre-entry circulation: send the principal the shape and price of the
+   call before a single figure is keyed. Once real figures exist the real PDA
+   is the document and this refuses to run. */
+async function printChargePlan(){
+ const lines=expectedSet();
+ if(!lines||!lines.length){toast('Nothing to plan yet — commodity, direction and liner terms first.','warn',6000);return;}
+ if(expHasReal()){toast('Real figures exist now — export the PDA itself.','warn',6000);return;}
+ if(!(window.jspdf&&window.jspdf.jsPDF)){
+  toast('The PDF export needs a one-time internet connection to fetch its libraries. Reconnect and choose PDF again.','err',9000);return;}
+ const j=S.j,today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+ const tbn=(v,ph)=>{const s=String(v==null?'':v).trim();return s?esc(s):esc(ph||'TBN');};
+ const col=(rows,title)=>{
+  if(!rows.length)return '';
+  return '<h4>'+esc(title)+'</h4><table class="cptab"><thead><tr><th>Code</th><th>Description</th>'
+   +'<th>Basis</th><th class="num">Rate ($)</th><th class="num">Amount ($)</th><th>Note</th></tr></thead><tbody>'
+   +rows.map(l=>'<tr><td class="c-c">'+esc(l.code&&l.code!=='-'?l.code:'—')+'</td>'
+    +'<td class="c-d">'+esc(l.d)+'</td>'
+    +'<td>'+esc(l.est?'Estimate':(l.unit||''))+'</td>'
+    +'<td class="num">'+(l.est?'—':((l.fixed?'':'≈ ')+num(l.rate).toFixed(2)))+'</td>'
+    +'<td class="num">'+(l.flat?$m(l.amt):'—')+'</td>'
+    +'<td class="c-m">'+esc(l.indic?'if applicable':(l.flat?'fixed charge':(l.fixed?'':'re-priced from the ship’s particulars on entry')))+'</td></tr>').join('')
+   +'</tbody></table>';};
+  const grpFor=p=>lines.filter(l=>l.payer===p);
+ const holder=document.createElement('div');
+ holder.className='pda';holder.setAttribute('data-d','principal');
+ holder.innerHTML='<div class="doc">'
+  +'<div class="doc-h"><div><div class="doc-co">'+esc(j.agency||'—')+'</div><div class="sm">'+esc(j.agencyAddr||'')+'</div></div>'
+  +'<div class="doc-t"><b>CHARGE PLAN — PROVISIONAL</b>'
+  +'<div class="sm">Job ref: <b>'+esc(j.ref||'TBN')+'</b></div>'
+  +'<div class="sm">Date: '+esc(today)+'</div></div></div>'
+  +'<table class="itab"><tr><td><span class="kv2"><b>Vessel:</b> '+tbn(j.vessel)+'</span></td>'
+  +'<td><span class="kv"><b>Flag:</b> '+tbn(j.flag)+'</span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Cargo:</b> '+esc(j.com||'—')+'</span></td>'
+  +'<td><span class="kv"><b>Direction:</b> '+esc(j.dir||'—')+' · <b>Terms:</b> '+esc(j.liner||'—')+'</span></td></tr>'
+  +'<tr><td><span class="kv2"><b>Port of call:</b> '+esc(j.port||'—')+'</span></td>'
+  +'<td><span class="kv"><b>GRT / LOA:</b> '+(num(j.grt)>0?esc(j.grt):'TBN')+' / '+(num(j.loa)>0?esc(j.loa):'TBN')+'</span></td></tr></table>'
+  +col(grpFor('principal'),'Principal’s PDA — expected lines')
+  +col(grpFor('receiver'),party().full+'’s PDA — expected lines')
+  +'<div class="sm cpNote">Rates are the published tariff. ≈ re-derives from the ship’s particulars once entered; amounts appear only where fixed. '
+  +'A plan, not a commitment — the PDA itself is issued from the live figures.</div>'
+  +'</div>';
+ document.body.appendChild(holder);
+ document.body.classList.add('x-exporting');
+ const prevTheme=document.documentElement.getAttribute('data-theme');
+ document.documentElement.setAttribute('data-theme','light');
+ xSetBusy(true);toast('Building the charge plan — one A4 page…','',5000);
+ const _pdn=pdfDocName;
+ pdfDocName=(p,di,used)=>{const s=_pdn(p,di,used).replace(/^PDA_/,'CHARGEPLAN_');return s;};
+ try{
+  alignFoot();
+  const names=[];
+  await captureOnePdf(holder,0,names);
+ }catch(e){toast('The charge plan could not be built ('+(e&&e.message||e)+').','err',9000);}
+ finally{
+  pdfDocName=_pdn;
+  xSetBusy(false);
+  document.body.classList.remove('x-exporting');
+  if(prevTheme)document.documentElement.setAttribute('data-theme',prevTheme);
+  holder.remove();
+ }
+}
+
 const ASKERS=[
  /* TWO CARGOES ON ONE SHIP — WHICH OF THEM ACTUALLY LOADS.
     A bulk carrier has several holds and routinely carries a different parcel in
