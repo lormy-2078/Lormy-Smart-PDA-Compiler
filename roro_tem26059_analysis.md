@@ -217,3 +217,40 @@ table — Code / Description / Charged on / Note — one A4 page.
 The intelligence is in WHICH lines appear for the trade and call, and in the
 basis each carries; the figures belong to the PDA once real inputs exist.
 Mirror, not motor — unchanged.
+
+## v2.12.0 — the constitution reaches liquid bulk and conventional cargo (07 Sep 26)
+
+DRYCAT was the pattern; this release applies it to the two remaining cargo
+blocks that compute() priced inline:
+
+* **LIQCAT** — liquid bulk handling (Third Schedule 3D, by delivery method,
+  petroleum vs vegetable, port & direction), pipeline dues (1E), loading-arm
+  dues (1H), fire-safety dues (1I).
+* **BAGCAT** — conventional stevedoring (3A by class × lift band × direction,
+  with the 3A8006 indirect +10% note), estimated labour delays, stevedoring
+  overtime (3L, still excluded from oil & gas calls), shore-handling overtime,
+  and craneage (3H, raised always, priced only when a crane deploys).
+
+Each record states trigger, basis, bearer and cites; compute() walks them and
+the cite rides the line into the expected panel. The class/lift derivations
+stay in the branch because every record needs them. The packing-list path and
+the dry-bulk block are untouched.
+
+**Proof.** 13 scenarios (MGO/crude/veg-oil/NOS × both ports × pipeline & road
+× import/export/transhipment × FO/LILO/FL/FLT; ammonium nitrate Direct &
+Indirect with crane on/off; palletised & jumbo-bag unitised lifts; general
+breakbulk; the worked O&G package example; O&G + bagged OT exclusion) were
+snapshotted from v2.11.0 and again after the refactor: **bit-identical on
+every line**, the only deltas being 48 new cite annotations.
+
+**Display.** Two new generic basis readings — "per CBM — rate by commodity
+class & lift band" and "estimate — a percentage of the stevedoring" (the unit
+'Estimate' previously fell through). Verified headless in the browser: the
+liquid and bagged panels render every line with its basis and cite chip and
+zero figures; a liquid call with full particulars correctly flips to the audit
+view ("Every expected charge accounted for"); a five-trade sweep (cocoa, MGO,
+containers, O&G package, RoRo vehicles) ran with zero console errors.
+
+Containers, RoRo vehicles and the packing-list path remain inline — they are
+larger machinery and will be constituted once this shape is confirmed on the
+three trades now done.

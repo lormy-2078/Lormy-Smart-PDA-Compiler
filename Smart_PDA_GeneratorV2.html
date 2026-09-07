@@ -1724,7 +1724,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.11.0 · 06 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.12.0 · 07 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73877,7 +73877,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.11.0';
+const VER='2.12.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -74270,6 +74270,66 @@ const duesCite=(dir,red)=>['First Schedule 1B — commodity port-dues row']
  .concat(red?[(dir&&dir.indexOf('Tranship')===0?'B(6)':'B(12)')+' — 60% of dues on transhipment / transit']:[]);
 const CLEAN_CITE=['First Schedule 1G — general port cleaning','Q(11) dirty cargoes definition'];
 const GSA_CITE=['GSA schedule — General / Containerised line, direction-split'];
+/* THE SAME CONSTITUTION FOR THE LIQUID BULK AND CONVENTIONAL CARGO BLOCKS.
+   Same shape as DRYCAT: each record states trigger, basis, bearer and cites,
+   compute() walks them, and the cite travels on the line into the expected
+   panel. Mirror, not motor — nothing here writes lines anywhere else. */
+const LIQCAT=[
+ {id:'liqStev',t:'Liquid bulk handling — delivery method of the call',
+  cite:['Third Schedule 3D — liquid bulk handling','petroleum vs vegetable, by port, method & direction'],
+  run:x=>{const dm=liqRate(x.cm.liq,x.j.port,x.dir);
+   if(!dm)return null;
+   return{sec:'cargo',code:dm.c,d:'Liquid Bulk Handling — '+LIQ[x.j.liquidMethod||'pipeline'].l,cmt:x.tag,
+    rate:dm.r,unit:'Per tonne',qty:x.l.qty,amt:r2(dm.r*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk};}},
+ {id:'pipeTerm',t:'Pipeline dues (oil terminal)',
+  cite:['First Schedule 1E — pipeline dues, oil terminal'],
+  when:x=>(x.j.liquidMethod||'pipeline')==='pipeline',
+  run:x=>({sec:'cargo',code:LIQD.pipeTerm.c,d:'Pipeline Dues (Oil Terminal)',cmt:x.tag,rate:LIQD.pipeTerm.r,
+   unit:'Per tonne',qty:x.l.qty,amt:r2(LIQD.pipeTerm.r*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk})},
+ {id:'arm',t:'Oil terminal loading arm dues',
+  cite:['First Schedule 1H — loading arm dues'],
+  when:x=>(x.j.liquidMethod||'pipeline')==='pipeline',
+  run:x=>({sec:'cargo',code:LIQD.arm.c,d:'Oil Terminal Loading Arm Dues',cmt:x.tag,rate:LIQD.arm.r,
+   unit:'Per tonne',qty:x.l.qty,amt:r2(LIQD.arm.r*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk})},
+ {id:'fire',t:'Fire safety dues',
+  cite:['First Schedule 1I — fire safety dues'],
+  run:x=>({sec:'cargo',code:LIQD.fire.c,d:'Fire Safety Dues',cmt:x.tag,rate:LIQD.fire.r,unit:'Per tonne',
+   qty:x.l.qty,amt:r2(LIQD.fire.r*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk})}
+];
+const BAGCAT=[
+ {id:'convStev',t:'GPHA stevedoring — commodity class, lift band & handling',
+  cite:['Third Schedule 3A — conventional cargo stevedoring','note under 3A8006 — indirect handling +10%','C(3) weight / CBM billing basis'],
+  run:x=>({sec:'cargo',code:x.st.c,d:'GPHA Stevedoring Cost ('+x.clsL+', '+x.lfL+')'
+    +(x.st.ind?' — indirect handling, +10%':''),cmt:x.dTag+(x.st.ind?' · '+x.st.base.toFixed(2)+' + 10% [note under 3A8006]':''),
+   rate:x.st.r,unit:x.u,qty:x.l.qty,amt:r2(x.st.r*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk})},
+ {id:'delay',t:'Estimated Labour Delays',
+  cite:['operating practice — estimated delays on the stevedoring'],
+  when:x=>!x.dv,
+  run:x=>{const dp=(x.cm.delayPct!=null)?x.cm.delayPct:x.P.delay;
+   return{sec:'cargo',code:'-',d:'Estimated Labour Delays',cmt:Math.round(dp*100)+'% · '+x.tag,
+    rate:r2(x.l.qty*x.st.r*dp),unit:'Estimate',qty:1,amt:r2(x.l.qty*x.st.r*dp),
+    delayPct:dp,delayBase:r2(x.l.qty*x.st.r),payer:x.payer,rcv:x.l.rcv,pending:true,dk:x.dk};}},
+ {id:'ot',t:'Stevedoring Labour Overtime',
+  cite:['Third Schedule L.1 — labour overtime','Ninth Schedule — no OT section (oil & gas excluded)'],
+  when:x=>!x.dv&&!isOG(),
+  run:x=>{const ot=BAGOT[x.pack][x.j.bagMode==='Indirect'?'Indirect':'Direct'];
+   return{sec:'cargo',code:ot.c,d:'Stevedoring Labour Overtime ('+(x.j.bagMode||'Direct')+' handling)',cmt:x.tag,
+    rate:ot.r,unit:x.u,qty:x.l.qty,amt:r2(ot.r*x.l.qty),payer:x.payer,rcv:x.l.rcv,pending:true,dk:x.dk};}},
+ {id:'shoreOT',t:"Shore Handling Labour Overtime",
+  cite:['local charge — shore gang overtime, distinct from GPHA stevedoring overtime'],
+  when:x=>!!x.cm.shoreOT,
+  run:x=>({sec:'cargo',code:'-',d:"Shore Handling Labour O'time",
+   cmt:"Local charge, distinct from GPHA stevedoring O'time · "+x.dTag,rate:x.cm.shoreOT,unit:x.u,qty:x.l.qty,
+   amt:r2(x.cm.shoreOT*x.l.qty),payer:x.cP,rcv:x.cR,dk:x.dk})},
+ {id:'crane',t:'Craneage',
+  cite:['Third Schedule 3H — craneage by lift band','D(4) geared vessel works her own cargo'],
+  run:x=>{const cr=BAGCR[x.lf]||BAGCR['5'], on=x.j.bagCrane==='yes', cq=on?num(x.line.qty):0;
+   return{sec:'cargo',code:cr.c,d:'Craneage ('+x.lfL+')',
+    cmt:on?x.dTag:(gearNote()+' · '+x.dTag),
+    rate:cr.r,unit:'Per tonne',qty:cq,
+    amt:r2(cr.r*cq),payer:x.cP,rcv:x.cR,crane:on?1:0,indic:!on,dk:x.dk};}}
+];
+
 
 /* Third Schedule D — liquid bulk handling, per tonne, by delivery method */
 const LIQ={pipeline:{l:'Pipeline to tank farm / terminal',
@@ -76819,69 +76879,31 @@ function compute(){
     if(o)add(Object.assign({cite:rec.cite},o));});
   }
   else if(l.cat==='bagged'||l.cat==='unitised'||l.cat==='genBreakbulk'){
+   /* THE CONSTITUTION APPLIES ITSELF — see BAGCAT above. The class / lift
+      derivations stay here because every record needs them. */
    const dg=!!cm.dg, un=!!cm.unitised, tier=j.bagDG==='DangerousII'?'II':'I';
    const cls=un?(dg?('UnitisedDangerous'+tier):'Unitised'):(dg?('Dangerous'+tier):'General');
    const pack=un?'unitised':(cm.pack==='other'?'other':'bag');
    const lf=pack==='other'?(j.bagLift||'5'):'5';
    const st=bagStev(dir,cls,lf,pkMode()), clsL=PLCLS['3A'][cls]||cls;
-   const lfL=(LIFTS.find(x=>x.id===lf)||LIFTS[0]).l;
+   const lfL=(LIFTS.find(z=>z.id===lf)||LIFTS[0]).l;
    const u=b.on?b.unit:(cm.unitLbl||'Per tonne');
-   add({sec:'cargo',code:st.c,d:'GPHA Stevedoring Cost ('+clsL+', '+lfL+')'
-     +(st.ind?' — indirect handling, +10%':''),cmt:dTag+(st.ind?' · '+st.base.toFixed(2)+' + 10% [note under 3A8006]':''),
-    rate:st.r,unit:u,qty:l.qty,amt:r2(st.r*l.qty),payer:cP,rcv:cR,dk});
-   if(!dv){
-    const dp=(cm.delayPct!=null)?cm.delayPct:P.delay;
-    add({sec:'cargo',code:'-',d:'Estimated Labour Delays',cmt:Math.round(dp*100)+'% · '+tag,
-     rate:r2(l.qty*st.r*dp),unit:'Estimate',qty:1,amt:r2(l.qty*st.r*dp),
-     delayPct:dp,delayBase:r2(l.qty*st.r),
-     payer,rcv:l.rcv,pending:true,dk});
-    /* Same Ninth Schedule reasoning as the dry bulk branch above — no overtime
-       section exists under it, so a Third Schedule L.1 rate must not be added
-       on top of an oil & gas call just because this parcel is bagged rather
-       than dry bulk. */
-    if(!isOG()){const ot=BAGOT[pack][j.bagMode==='Indirect'?'Indirect':'Direct'];
-    add({sec:'cargo',code:ot.c,d:'Stevedoring Labour Overtime ('+(j.bagMode||'Direct')+' handling)',cmt:tag,
-     rate:ot.r,unit:u,qty:l.qty,amt:r2(ot.r*l.qty),payer,rcv:l.rcv,pending:true,dk});}}
-   /* SHORE HANDLING OVERTIME FOLLOWS THE STEVEDORING. It is overtime on the gang
-      working this cargo, so it is borne by whoever bears the handling — it was
-      pinned to the receiver, which is right under Free Out and wrong under Liner
-      Out and Full Liner Terms. The user, 2026-08-19, on an ammonium nitrate FLT
-      job: "port dues and shore handling OT are on shipper side but should be on
-      principal side." Same `cP`/`cR` the GPHA stevedoring line above uses, so the
-      two can never again disagree about who is working the cargo. */
-   if(cm.shoreOT)add({sec:'cargo',code:'-',d:"Shore Handling Labour O'time",
-    cmt:"Local charge, distinct from GPHA stevedoring O'time · "+dTag,rate:cm.shoreOT,unit:u,qty:l.qty,
-    amt:r2(cm.shoreOT*l.qty),payer:cP,rcv:cR,dk});
-   /* CRANEAGE IS ALWAYS LISTED, AND ONLY APPLIED WHEN THE SHIP CANNOT WORK
-      HERSELF. The user, 2026-08-17: "always add craneage but do not auto apply
-      unless of course the vessel is gearless."
-      A geared ship works her own cargo and earns no craneage at all [D(4)] —
-      the MV BALTIC PURPLE carried 2×36 T and 2×8 T cranes and GPHA's stevedore
-      note duly reads "No Cranage". But a line that simply is not there cannot
-      be checked, and craneage is the biggest thing that can be silently
-      MISSING from a conventional PDA. So it is raised either way: priced when a
-      crane is deployed, and at nil with its rate showing when it is not, which
-      is the same treatment Shifting and the oil & gas services already get. */
-   {const cr=BAGCR[lf]||BAGCR['5'], on=j.bagCrane==='yes', cq=on?num(line.qty):0;
-    /* Craneage is published per TONNE, so it stays on the weight even where the
-       rest of the B/L bills per CBM. */
-    add({sec:'cargo',code:cr.c,d:'Craneage ('+lfL+')',
-     cmt:on?dTag:(gearNote()+' · '+dTag),
-     rate:cr.r,unit:'Per tonne',qty:cq,
-     amt:r2(cr.r*cq),payer:cP,rcv:cR,crane:on?1:0,indic:!on,dk});}
+   const x={j,dir,l,cm,dv,cP,cR,dk,tag,dTag,payer,P,st,cls,clsL,lf,lfL,pack,u,line,b};
+   BAGCAT.forEach(rec=>{
+    if(rec.when&&!rec.when(x))return;
+    const o=rec.run(x);
+    if(o)add(Object.assign({cite:rec.cite},o));});
   }
+
   else if(l.cat==='liquidBulk'){
-   const dm=liqRate(cm.liq,j.port,dir);
-   if(dm)add({sec:'cargo',code:dm.c,d:'Liquid Bulk Handling — '+LIQ[j.liquidMethod||'pipeline'].l,cmt:tag,
-    rate:dm.r,unit:'Per tonne',qty:l.qty,amt:r2(dm.r*l.qty),payer:cP,rcv:cR,dk});
-   if((j.liquidMethod||'pipeline')==='pipeline'){
-    add({sec:'cargo',code:LIQD.pipeTerm.c,d:'Pipeline Dues (Oil Terminal)',cmt:tag,rate:LIQD.pipeTerm.r,
-     unit:'Per tonne',qty:l.qty,amt:r2(LIQD.pipeTerm.r*l.qty),payer:cP,rcv:cR,dk});
-    add({sec:'cargo',code:LIQD.arm.c,d:'Oil Terminal Loading Arm Dues',cmt:tag,rate:LIQD.arm.r,
-     unit:'Per tonne',qty:l.qty,amt:r2(LIQD.arm.r*l.qty),payer:cP,rcv:cR,dk});}
-   add({sec:'cargo',code:LIQD.fire.c,d:'Fire Safety Dues',cmt:tag,rate:LIQD.fire.r,unit:'Per tonne',
-    qty:l.qty,amt:r2(LIQD.fire.r*l.qty),payer:cP,rcv:cR,dk});
+   /* THE CONSTITUTION APPLIES ITSELF — see LIQCAT above. */
+   const x={j,dir,l,cm,cP,cR,dk,tag};
+   LIQCAT.forEach(rec=>{
+    if(rec.when&&!rec.when(x))return;
+    const o=rec.run(x);
+    if(o)add(Object.assign({cite:rec.cite},o));});
   }
+
   if(cm.dirty)add({sec:'cargo',code:'1G1001',d:'General Port Cleaning Dues (dry bulk / dirty cargo)',cmt:dTag,
    cite:CLEAN_CITE,rate:P.clean,unit:'Per tonne',qty:l.qty,amt:r2(P.clean*l.qty),payer:cP,rcv:cR,dk});
  });
@@ -78439,6 +78461,8 @@ const expBasis=l=>{
  if(u==='per grt/day')return 'per GRT per day at anchorage';
  if(u==='per hour')return 'per hour — hours follow the port stay';
  if(u==='%')return 'a percentage of the charge it rides on';
+ if(u==='per cbm')return 'per CBM — rate by commodity class & lift band';
+ if(u==='estimate')return 'estimate — a percentage of the stevedoring';
  if(u==='per man hour')return 'per man-hour deployed';
  if(u==='lumpsum'){
   if(/Agency|Admin|Release/.test(d))return 'lumpsum — the agency’s own charge, set at the desk';
