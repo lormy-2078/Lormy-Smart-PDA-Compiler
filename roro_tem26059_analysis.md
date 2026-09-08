@@ -320,3 +320,21 @@ beta note is a sentence, not a pill; hover everywhere is one hairline changing
 colour. What is left is ink, one accent, and hairlines — in light and dark.
 Paper untouched. Cocoa reconstruction unchanged ($106,815.59), zero console
 errors. Shots in mockups/minimal_v215/.
+
+## v2.16.0 — MINIMAL, FINAL: two cuts, then the knife is put away (08 Sep 26)
+
+The user left the call to me. I took exactly two cuts and then stopped:
+ 1. The header was two stacked bands with two hairlines — brand row and tab
+    row. It is now one band with one hairline under both.
+ 2. On Home the tiles sat in a box on the paper — a rectangle around
+    rectangles. The outer box is gone; the tiles stand on open paper with the
+    title's hairline as the only rule above them.
+
+What I deliberately did NOT cut, and why: the tile borders stay. A thing that
+is clicked must look clickable — affordance is not ornament. Dropping the
+border would trade clarity for austerity, which is how minimalism becomes
+bad design. This is the honest floor; the chrome now consists of ink,
+hairlines, one accent, and the figures.
+
+Proof unchanged as always: cocoa $106,815.59 / 38 lines, zero console errors,
+paper untouched. Shots in mockups/minimal_v216/.
