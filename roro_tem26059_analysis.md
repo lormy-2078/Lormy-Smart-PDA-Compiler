@@ -338,3 +338,24 @@ hairlines, one accent, and the figures.
 
 Proof unchanged as always: cocoa $106,815.59 / 38 lines, zero console errors,
 paper untouched. Shots in mockups/minimal_v216/.
+
+## v2.17.0 — HOME REBUILT: nine boxes become an index (08 Sep 26)
+
+The user, looking at the minimal home in their own browser: "is there a much
+better way, to redesign this home?" There was. The old home was a wall of
+nine equal cards for what is only a shortcut menu — the loudest thing on the
+screen. Now:
+
+* The trades read like an index in a tariff book: three columns divided by
+  hairlines, one line of name, one muted line of description (ellipsised),
+  the coverage badge small beneath. Hover is a background tint; nothing
+  moves; nothing has a border of its own.
+* The card heading carries the primary path as a button — "Open the
+  workspace →" — and the sub-line now names the real front door: drop the
+  documents and the system reads them.
+
+What was NOT moved, because the user decided it earlier and the decision
+stands: the restore note stays below the tiles (they asked for it further
+down the page, 2026-08-26) and Recent work stays folded by default (long
+libraries, their call). Proof unchanged: cocoa $106,815.59 / 38 lines, zero
+console errors. Shots in mockups/home_v217/.

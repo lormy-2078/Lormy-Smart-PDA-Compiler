@@ -1695,6 +1695,32 @@ button{border-radius:6px}
 /* Home: tiles on open paper. */
 #v-home>.card{border:none;background:none;padding:0;box-shadow:none}
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME, REBUILT — v2.17. Nine boxes become an index.
+   The old home was a wall of nine equal cards — big borders, big padding,
+   two-line descriptions — the loudest thing on the screen for what is only a
+   shortcut menu. Now the trades read like an index in a tariff book: three
+   quiet columns divided by hairlines, one line of name, one line of muted
+   description, the coverage badge small under it. Hover is a background
+   tint, nothing moves. The card heading gains the primary path as a button —
+   the Workspace, where documents are dropped and read.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tiles{gap:0;border-top:1px solid var(--line)}
+.tile{border:none;border-radius:0;background:none;box-shadow:none;
+  padding:12px 14px 13px;border-bottom:1px solid var(--line);
+  border-left:1px solid transparent;gap:3px}
+.tile:nth-child(3n+2){border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.tile:hover{border-color:var(--line);background:var(--card2)}
+.tile:nth-child(3n+2):hover{border-left-color:var(--line);border-right-color:var(--line)}
+.tile[disabled]:hover{background:none}
+.tile .t{font-size:13px}
+.tile .d{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#tiles .tag{font-size:9.5px;padding:2px 7px;margin-top:3px}
+/* last row: no bottom rule under the final line of the index */
+.tiles .tile:nth-last-child(-n+3){border-bottom:none}
+
 /* ═══ PRINT — always light paper, chrome removed ══════════════════════════ */
 /* A HEADER CELL IS EDITABLE BUT MUST NOT LOOK LIKE A FORM. It sits inline inside
    a sentence — "Draft: 14.0 m" — so it takes an underline on hover rather than a
@@ -1879,7 +1905,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.16.0 · 08 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.17.0 · 08 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -1921,10 +1947,10 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
          with the title, not floating below it as if it belonged with the
          tiles instead. -->
     <h2 style="margin-top:var(--s3);align-items:flex-start">
-      <svg class="ic" viewBox="0 0 24 24" style="margin-top:2px"><use href="#i-file"/></svg>
       <div>Create a new PDA
-        <div class="sm" style="font-weight:400;margin-top:3px">Choose the option that best matches the vessel call or cargo you are handling. The system loads the relevant charges and fields automatically.</div>
+        <div class="sm" style="font-weight:400;margin-top:3px">Pick the closest match — or open the Workspace and drop the documents; the system reads them and starts the PDA.</div>
       </div>
+      <span class="sum"><button class="sm2" type="button" onclick="nav('job')">Open the workspace →</button></span>
     </h2>
     <div class="tiles" id="tiles"></div>
   </div>
@@ -74032,7 +74058,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.16.0';
+const VER='2.17.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
