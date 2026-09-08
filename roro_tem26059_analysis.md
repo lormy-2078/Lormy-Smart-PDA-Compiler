@@ -254,3 +254,38 @@ containers, O&G package, RoRo vehicles) ran with zero console errors.
 Containers, RoRo vehicles and the packing-list path remain inline — they are
 larger machinery and will be constituted once this shape is confirmed on the
 three trades now done.
+
+## v2.13.0 — HARBOURLINE: a visual redesign of the application (08 Sep 26)
+
+The user, reviewing v2.12: "i want a visual redesign overhaul -- i leave it to
+you to impress me." The paper keeps its own 13px voice; this redesigns the
+desk around it. Scope doctrine: the PDF export embeds the whole stylesheet, so
+every new rule targets application chrome only — verified statically that no
+selector touches .doc/.pda/.pf2/.hed/.cptab, and the paper builder emits no
+buttons, so element-level button polish cannot reach it.
+
+Identity — deep water, one warm light, Ghana gold:
+* Tokens: six golds added to :root and [data-theme=dark]; everything else
+  reuses the existing token system, so dark mode stays complete.
+* Topbar: near-black marine gradient with a faint diagonal chart texture, a
+  gold hairline at the waterline, the anchor set in a gold-ringed medallion.
+* Desk: the page background is cool harbour mist under a faint chart grid,
+  with one warm radial light from the top-right; print forces white.
+* Nav: a rail of pills — the active port flies navy with a gold light.
+* Tiles: a gold notch over each card and a faint trade watermark
+  (grab, droplet, stacked boxes, ship, car, crane hook) bottom-right; hover
+  stays exactly what the user approved earlier — border colour plus lift.
+* Step rail and progress ring run gold into navy; primary buttons are a navy
+  gradient with an inner light; the accent action (.a) is now solid gold.
+* Command palette and modals wear a 2px gold crown line; the palette's
+  selection is gold-washed. Toasts, dock, chips, scrollbars and the selection
+  colour all pick up the same vocabulary.
+
+Also found and removed: a 648-character duplicated boot-tail fragment that had
+been appended after </html> since v2.12.0 (or earlier) and rendered as stray
+text at the foot of the page.
+
+Proof: cocoa reconstruction still 38 lines at $106,815.59, five cite chips in
+data, expected panel audit intact, zero console/page errors across home,
+workspace, dark mode and the command palette; headless screenshots archived
+in mockups/harbourline_v213/.
