@@ -62,9 +62,6 @@
   --ez:cubic-bezier(.22,.9,.28,1);
   --r1:6px; --r2:10px; --r3:14px; --r4:18px;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
-  /* HARBOURLINE gold — brand ornament and signal light (v2.13) */
-  --gold:#d99a1b; --goldHi:#f2b83c; --goldDeep:#a9720a;
-  --goldInk:#7a5600; --goldSoft:#faf0d9; --goldLine:#e6cf9d;
   --f0:11.5px; --f1:12.5px; --f2:13.5px; --f3:15px; --f4:18px; --f5:24px;
   --mono:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;
   --sans:'Segoe UI Variable Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Inter,Roboto,Arial,sans-serif;
@@ -82,8 +79,6 @@
   --bad:#f2705f;  --badInk:#ff9182;  --badSoft:#2b1614;  --badLine:#5c2b25;
   --info:#5b9bdd; --infoInk:#88b9ea; --infoSoft:#111f2d; --infoLine:#254663;
   --paper:#161d24; --paperInk:#e6edf3; --paperLine:#2a333c; --paperHead:#1b222a;
-  --gold:#e3ab2e; --goldHi:#f4c455; --goldDeep:#8f6508;
-  --goldInk:#f0c765; --goldSoft:#2a2110; --goldLine:#5a4718;
   --e1:0 1px 2px rgba(0,0,0,.55); --e2:0 4px 16px rgba(0,0,0,.5); --e3:0 22px 54px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box}
@@ -1547,124 +1542,88 @@ tr.thd td{background:var(--sunk);color:var(--ink3);font-size:10.5px;font-weight:
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HARBOURLINE — the v2.13 identity.
-   SCOPE DOCTRINE: every rule here targets application chrome only. The PDF
-   export embeds this whole stylesheet into its raster, so nothing below may
-   restyle a selector the paper uses (.pda, .doc, .pf2, .hed, .cptab…).
-   Paper keeps its own 13px voice; this is the desk around it.
+   MINIMAL — v2.14. The instrument, not the showroom.
+   The user's verdict on the HARBOURLINE pass: this is a simple tool — upload
+   documents, get the result quickly. So: flat colour, hairline borders, no
+   gradients, no textures, no watermarks, no ornament. Shadows only where a
+   surface floats (modals, dock). Everything the v2.13 pass decorated is
+   flattened back to its simplest honest form. Paper stays exactly as it was.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* The desk: cool harbour mist with a faint chart grid and one warm light
-   falling from the top-right corner. Print forces plain white below. */
-body{background:
-  radial-gradient(1200px 480px at 88% -180px,color-mix(in srgb,var(--gold) 16%,transparent),transparent 70%),
-  repeating-linear-gradient(0deg,transparent 0 47px,color-mix(in srgb,var(--brand) 5%,transparent) 47px 48px),
-  repeating-linear-gradient(90deg,transparent 0 47px,color-mix(in srgb,var(--brand) 5%,transparent) 47px 48px),
-  var(--bg)}
-[data-theme=dark] body{background:
-  radial-gradient(1200px 480px at 88% -180px,color-mix(in srgb,var(--gold) 12%,transparent),transparent 70%),
-  repeating-linear-gradient(0deg,transparent 0 47px,color-mix(in srgb,#ffffff 4%,transparent) 47px 48px),
-  repeating-linear-gradient(90deg,transparent 0 47px,color-mix(in srgb,#ffffff 4%,transparent) 47px 48px),
-  var(--bg)}
-@media print{body{background:#fff!important}}
-::selection{background:var(--goldSoft);color:var(--ink)}
+/* The desk is plain. No grid, no light, no texture. */
+body{background:var(--bg)}
+::selection{background:var(--accSoft);color:var(--ink)}
 
-/* Scrollbars: thin, quiet, brand-tinted. Never rendered in the raster. */
+/* Topbar: one flat band of brand colour. No gradient, no hairline, no gloss. */
+.top{background:var(--brand)}
+.top::before,.top::after{content:none}
+.brand>.ic{width:1.3em;height:1.3em;padding:0;background:none;border:none;
+  border-radius:0;color:inherit;box-shadow:none}
+.gbtn{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.16)}
+.gbtn:hover{background:rgba(255,255,255,.20);transform:none}
+.saveDot i{background:var(--acc)}
+
+/* Nav: plain text tabs; the active one is an underline. Nothing else. */
+.nav{box-shadow:none;padding:0 var(--s5)}
+.nav button{border:none;border-bottom:2px solid transparent;border-radius:0;
+  margin:0;padding:14px 14px;background:none}
+.nav button:hover{background:none;color:var(--ink)}
+.nav button.on{background:none;border-bottom-color:var(--acc);color:var(--brandInk)}
+.nav button.on::after{content:none}
+.buildTag{border:none;background:none;padding:0;border-radius:0;
+  color:var(--ink3);font-family:var(--mono)}
+
+/* Context bar ring: the functional accent colour, nothing ceremonial. */
+.ring .fg{stroke:var(--acc)}
+
+/* Surfaces: flat, hairline borders, small radius. Shadow only where a
+   surface genuinely floats above the page. */
+.card{border-radius:var(--r2);box-shadow:none}
+.grp{border-radius:var(--r2)}
+.grp>h3{background:var(--card2)}
+.note{border-radius:var(--r1)}
+kbd{border-radius:5px}
+
+/* Tiles: plain cards. No notch, no watermark, no lift — the border darkens,
+   which is the whole of the hover. */
+.tile{border-radius:var(--r2);background:var(--card);padding:var(--s4)}
+.tile::before,.tile::after{content:none}
+.tile:hover{border-color:var(--acc);transform:none}
+#tiles .tag{border-radius:6px}
+
+/* Step rail: the progress line is the accent colour, flat. */
+.rail-now{border-radius:var(--r2)}
+.rail-now::after,.rail::after{background:var(--acc)}
+.rail-badge{box-shadow:none}
+.rail-list button{border-radius:var(--r2)}
+
+/* Buttons: flat fills. One navy for primary, one teal for accent. */
+button{border-radius:8px}
+button.p,.rail-act.p,.rail-nav.go{background:var(--brand);border-color:var(--brand);box-shadow:none}
+button.p:hover,.rail-nav.go:hover{background:var(--brand2);border-color:var(--brand2);transform:none}
+button.a{background:var(--acc);border-color:var(--acc);color:#04231f;box-shadow:none}
+button.a:hover{filter:brightness(1.05)}
+button:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{outline-color:var(--acc)}
+
+/* Overlays: plain sheets that float. No crown line. */
+.ov{background:rgba(6,14,20,.55)}
+.cbox{border-radius:var(--r3);box-shadow:var(--e3)}
+.mbox{border-radius:var(--r3)}
+.ci{border-radius:8px}
+.ci[aria-selected=true]{background:var(--accSoft);color:var(--accInk)}
+.ci[aria-selected=true] .u{color:var(--accInk);opacity:.85}
+.toast{border-radius:var(--r2)}
+.dock{border-radius:var(--r3)}
+.dockPeek{background:var(--brand);border:none;
+  box-shadow:var(--e2),0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent)}
+
+/* Quiet thin scrollbars, neutral. */
 ::-webkit-scrollbar{width:11px;height:11px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink3) 38%,transparent);
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink3) 34%,transparent);
   border-radius:8px;border:3px solid transparent;background-clip:content-box}
-::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink3) 62%,transparent);
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink3) 55%,transparent);
   border:3px solid transparent;background-clip:content-box}
-
-/* ── topbar: deep water, one warm light, a gold hairline at the waterline ── */
-.top{background:
-  radial-gradient(130% 260% at 6% -70%,color-mix(in srgb,var(--gold) 26%,transparent) 0%,transparent 55%),
-  repeating-linear-gradient(115deg,rgba(255,255,255,.028) 0 2px,transparent 2px 26px),
-  linear-gradient(106deg,#05192a 0%,var(--brand) 48%,#0f4265 100%)}
-.top::before{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;z-index:1;
-  background:linear-gradient(90deg,transparent,var(--goldHi) 18%,var(--goldHi) 82%,transparent);opacity:.9}
-.brand>.ic{width:38px;height:38px;padding:8px;border-radius:11px;color:#ffd88a;
-  background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.05));
-  border:1px solid color-mix(in srgb,var(--goldHi) 55%,transparent);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
-.brand small{opacity:.72;letter-spacing:.02em}
-.gbtn{border-radius:10px}
-.saveDot i{background:var(--goldHi)}
-
-/* ── primary nav: a rail of pills; the active port flies navy with a gold light ── */
-.nav{gap:4px;padding:7px var(--s5);background:var(--card);border-bottom:1px solid var(--line);box-shadow:var(--e1)}
-.nav button{border:1px solid transparent;border-radius:999px;padding:9px 15px;margin:0;
-  background:transparent;color:var(--ink2)}
-.nav button:hover{background:var(--card2);color:var(--ink)}
-.nav button.on{background:var(--brand);border:1px solid var(--brand);border-bottom:1px solid var(--brand);
-  color:var(--onDark);box-shadow:var(--e1)}
-.nav button.on::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--goldHi);flex:none}
-.navBeta{border-radius:999px}
-.buildTag{font-family:var(--mono);border-radius:999px;border:1px solid var(--line2);
-  padding:3px 9px;color:var(--ink2);background:var(--card2)}
-
-/* ── context bar: the progress ring runs gold ── */
-.ring .fg{stroke:var(--gold)}
-.ctx{border-bottom-color:color-mix(in srgb,var(--line) 80%,transparent)}
-
-/* ── cards and group panels ── */
-.card{border-radius:16px;
-  box-shadow:0 1px 2px rgba(var(--shadowC),.05),0 10px 28px rgba(var(--shadowC),.07)}
-.card>h2{letter-spacing:-.01em}
-.card>h2 .ic{color:var(--brandInk);opacity:.85}
-.grp{border-radius:13px}
-.grp>h3{background:linear-gradient(180deg,var(--card2),color-mix(in srgb,var(--card2) 55%,var(--sunk)))}
-
-/* ── tiles: a gold notch, a trade watermark, hover = border + lift only ── */
-.tile{border-radius:16px;padding:18px 16px 16px;
-  background:linear-gradient(180deg,var(--card) 0%,color-mix(in srgb,var(--card2) 45%,var(--card)) 100%)}
-.tile::before{content:'';position:absolute;top:0;left:18px;width:42px;height:3px;
-  border-radius:0 0 4px 4px;background:linear-gradient(90deg,var(--gold),color-mix(in srgb,var(--gold) 25%,transparent))}
-.tile:hover{border-color:var(--goldDeep)}
-.tile .t{letter-spacing:-.01em}
-#tiles .tag{border-radius:999px}
-.tile::after{content:'';position:absolute;right:-12px;bottom:-14px;width:88px;height:88px;
-  background-repeat:no-repeat;background-size:contain;opacity:.08;pointer-events:none}
-.tile[onclick*="dryBulk"]::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230c3a55' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M12 2.5v4'/%3E%3Cpath d='M7 6.5h10l-1.6 6.5H8.6z'/%3E%3Cpath d='M4.5 21c2.2-3.2 4.6-4.6 7.5-4.6s5.3 1.4 7.5 4.6'/%3E%3C/svg%3E")}
-.tile[onclick*="liquidBulk"]::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230c3a55' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M12 3s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z'/%3E%3Cpath d='M9.5 14.5a2.6 2.6 0 0 0 2.4 2.6'/%3E%3C/svg%3E")}
-.tile[onclick*="breakBulk"]::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230c3a55' stroke-width='1.4' stroke-linecap='round'%3E%3Crect x='3.5' y='13' width='8' height='7' rx='1'/%3E%3Crect x='12.5' y='13' width='8' height='7' rx='1'/%3E%3Crect x='8' y='5.5' width='8' height='7' rx='1'/%3E%3C/svg%3E")}
-.tile[onclick*="liner"]::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230c3a55' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M3 17c1.8 0 1.8 1.5 3.6 1.5S8.4 17 10.2 17s1.8 1.5 3.6 1.5S15.6 17 17.4 17s1.8 1.5 3.6 1.5'/%3E%3Cpath d='M5 14V9h14l-2 5M12 9V5M9 5h6'/%3E%3C/svg%3E")}
-.tile[onclick*="roro"]::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230c3a55' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M4 16v-3.4L6.4 8h9.2L19 12.6h1v3.4h-2'/%3E%3Ccircle cx='8' cy='16.6' r='1.8'/%3E%3Ccircle cx='15.4' cy='16.6' r='1.8'/%3E%3Cpath d='M9.8 16h3.8'/%3E%3C/svg%3E")}
-.tile[onclick*="offshore"]::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230c3a55' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M4 4h13l3 4'/%3E%3Cpath d='M16 4v6'/%3E%3Cpath d='M16 10a3.2 3.2 0 1 1-3.2 3.2'/%3E%3Cpath d='M4 4v4'/%3E%3C/svg%3E")}
-[data-theme=dark] .tile::after{opacity:.10;filter:invert(1) brightness(1.6)}
-
-/* ── step rail: the way forward runs gold into navy ── */
-.rail-now{border-radius:13px}
-.rail-now::after,.rail::after{background:linear-gradient(90deg,var(--gold),var(--brand2))}
-.rail-badge{box-shadow:var(--e1)}
-button.p,.rail-act.p,.rail-nav.go{background:linear-gradient(180deg,var(--brand2),var(--brand));
-  border-color:var(--brand);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),var(--e1)}
-button.p:hover,.rail-nav.go:hover{background:linear-gradient(180deg,#1b6391,var(--brand2));border-color:var(--brand2)}
-button.a{background:linear-gradient(180deg,var(--goldHi),var(--gold));border-color:var(--goldDeep);
-  color:#251a03;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),var(--e1)}
-button.a:hover{filter:brightness(1.06)}
-button{border-radius:10px}
-button:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{outline-color:var(--goldDeep)}
-.rail-list button{border-radius:12px}
-
-/* ── overlays: command palette, modals, toasts ── */
-.ov{background:rgba(4,12,18,.66)}
-.cbox{border-radius:18px;box-shadow:inset 0 2px 0 var(--goldHi),var(--e3)}
-.mbox{border-radius:18px}
-.ci{border-radius:10px}
-.ci[aria-selected=true]{background:var(--goldSoft);color:var(--goldInk)}
-.ci[aria-selected=true] .u{color:var(--goldInk);opacity:.8}
-.toast{border-radius:12px}
-.dock{border-radius:16px}
-.dockPeek{background:linear-gradient(180deg,var(--brand2),var(--brand));
-  border:1px solid color-mix(in srgb,var(--goldHi) 45%,transparent);
-  box-shadow:var(--e2),0 0 0 3px color-mix(in srgb,var(--gold) 16%,transparent)}
-
-/* ── small type ── */
-kbd{border-radius:6px}
-.note{border-radius:12px}
-.empty .t{letter-spacing:-.01em}
 
 /* ═══ PRINT — always light paper, chrome removed ══════════════════════════ */
 /* A HEADER CELL IS EDITABLE BUT MUST NOT LOOK LIKE A FORM. It sits inline inside
@@ -1850,7 +1809,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.13.0 · 08 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.14.0 · 08 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -74003,7 +73962,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.13.0';
+const VER='2.14.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */

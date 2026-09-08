@@ -289,3 +289,22 @@ Proof: cocoa reconstruction still 38 lines at $106,815.59, five cite chips in
 data, expected panel audit intact, zero console/page errors across home,
 workspace, dark mode and the command palette; headless screenshots archived
 in mockups/harbourline_v213/.
+
+## v2.14.0 — MINIMAL: the instrument, not the showroom (08 Sep 26)
+
+The user's verdict on HARBOURLINE: "since this is simple PDA maker -- the
+design should be minimal... no need for all the fancy stuff". Agreed, and it
+is now standing policy: this is a tool — documents in, PDA out, quickly — and
+the desk should disappear behind the work.
+
+v2.13's ornament is removed outright (gold tokens, chart-grid desk, topbar
+texture and hairline, anchor medallion, tile notches and trade watermarks,
+pill nav, gradient buttons, gold crowns) and replaced by a MINIMAL override
+section: flat brand topbar, plain text tabs with an underline on the active
+one, flat cards with hairline borders and small radii, tiles whose whole
+hover is a border colour, flat navy/teal button fills, accent-coloured
+progress, shadows only on surfaces that float (modals, dock). Light and dark
+both. Paper untouched, as always.
+
+Proof: cocoa reconstruction unchanged (38 lines, $106,815.59), zero console
+errors, screenshots in mockups/minimal_v214/.
