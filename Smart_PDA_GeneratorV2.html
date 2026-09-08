@@ -1718,6 +1718,9 @@ button{border-radius:6px}
 .tile .t{font-size:13px}
 .tile .d{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 #tiles .tag{font-size:9.5px;padding:2px 7px;margin-top:3px}
+/* v2.17.1 — the index row is name + badge; the description lives on hover. */
+.tile .d{display:none}
+.tile{padding:13px 14px}
 /* last row: no bottom rule under the final line of the index */
 .tiles .tile:nth-last-child(-n+3){border-bottom:none}
 
@@ -1905,7 +1908,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.17.0 · 08 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.17.1 · 08 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -74058,7 +74061,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.17.0';
+const VER='2.17.1';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */
@@ -83401,7 +83404,7 @@ function paintHome(){
  const H=hist();
  const tiles=$('#tiles');
  if(tiles)tiles.innerHTML=TRADES.map(t=>{const c=tradeCov(t);
-  return '<button class="tile"'+(c.off?' disabled title="Not yet priced by this app."':'')
+  return '<button class="tile" title="'+esc(c.off?'Not yet priced by this app.':t.d)+'"'+(c.off?' disabled':'')
   +' onclick="startTrade(\''+t.id+'\')"><span class="t">'+t.n+'</span><span class="d">'+t.d+'</span>'
   +'<span class="tag '+covTone(c.lv)+'" style="margin-top:4px">'+esc(coverBadge(t.cover))+'</span></button>';}).join('');
  const L=$('#recL'),R=H.slice(0,8);

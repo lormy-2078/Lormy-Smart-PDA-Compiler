@@ -359,3 +359,9 @@ stands: the restore note stays below the tiles (they asked for it further
 down the page, 2026-08-26) and Recent work stays folded by default (long
 libraries, their call). Proof unchanged: cocoa $106,815.59 / 38 lines, zero
 console errors. Shots in mockups/home_v217/.
+
+### v2.17.1 — the index, finished (08 Sep 26)
+The description line left the index rows; each trade is now name + coverage
+badge on a hairline ledger, with the description preserved as the row's hover
+title so a first-run reader can still ask what a trade means. This is the
+floor for the home: anything further would remove information, not ornament.
