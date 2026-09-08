@@ -1625,6 +1625,56 @@ button:focus-visible,[tabindex]:focus-visible,[contenteditable]:focus-visible{ou
 ::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink3) 55%,transparent);
   border:3px solid transparent;background-clip:content-box}
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MINIMAL, MORE — v2.15. Paper and ink.
+   The user, on v2.14: "can you make it more minimal ?" What remained was
+   still ornament: one large navy band, an icon beside every label, a grey
+   desk under white cards, soft corners. Now: the topbar is the same paper as
+   the page, separated by a hairline; tabs and headings are text only; the
+   desk is the card colour itself; corners tighten to 6px. What is left is
+   ink, one accent, and hairlines.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The desk is the paper. One surface, hairline separations. */
+body{background:var(--card)}
+
+/* Topbar: paper, not a band. */
+.top{background:var(--card);color:var(--ink);border-bottom:1px solid var(--line);padding:var(--s3) var(--s5)}
+.brand>.ic{color:var(--ink)}
+.brand small{color:var(--ink3)}
+.gbtn{background:none;border:1px solid var(--line2);color:var(--ink2)}
+.gbtn:hover{background:var(--card2);color:var(--ink);transform:none}
+.gbtn kbd{background:var(--card2);color:var(--ink2);border:none;box-shadow:none}
+.saveDot{color:var(--ink3)}
+
+/* Tabs: text. Headings: text. The icons were decoration. */
+.nav button .ic{display:none}
+.nav button{padding:12px 12px;font-size:var(--f1)}
+.card>h2 .ic{display:none}
+
+/* Tighter corners everywhere the chrome rounds. */
+.card,.grp,.tile,.note{border-radius:6px}
+button{border-radius:6px}
+.cbox,.mbox{border-radius:10px}
+.dock{border-radius:10px}
+.chip{border-radius:6px}
+#tiles .tag{border-radius:4px}
+.rail-now,.rail-list button{border-radius:6px}
+
+/* The beta note is a sentence, not a pill. */
+.navBeta{background:none;border:none;color:var(--warnInk);padding:0}
+
+/* Nothing floats except what must. */
+.dockPeek{box-shadow:var(--e2)}
+.dockPeek:hover{transform:none}
+
+/* Hover is one hairline changing colour, everywhere. */
+.tile:hover{border-color:var(--ink3)}
+.nav button:hover{color:var(--ink)}
+
+@media print{body{background:#fff!important}}
+
 /* ═══ PRINT — always light paper, chrome removed ══════════════════════════ */
 /* A HEADER CELL IS EDITABLE BUT MUST NOT LOOK LIKE A FORM. It sits inline inside
    a sentence — "Draft: 14.0 m" — so it takes an underline on hover rather than a
@@ -1809,7 +1859,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
   <button data-v="tariff"><svg class="ic" viewBox="0 0 24 24"><use href="#i-book"/></svg>Tariff</button>
   <button data-v="set"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Settings</button>
   <span class="navBeta" title="Automated calculations are designed to assist and not replace professional review. Review every charge before issuing.">Beta — review charges before issuing</span>
-  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.14.0 · 08 Sep 26</span>
+  <span class="buildTag" title="Build stamp — if a recent fix seems missing, check this against the latest commit on the repository">v2.15.0 · 08 Sep 26</span>
 </nav>
 
 <div class="ctx" id="ctx" style="display:none">
@@ -73962,7 +74012,7 @@ body.fitting .doc .grip,body.fitting .doc .c-p,body.fitting .doc .c-x{display:no
    One file, no server, no network needed except for AI document reading.
    ════════════════════════════════════════════════════════════════════════════ */
 if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const VER='2.14.0';
+const VER='2.15.0';
 const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MK=MAC?'⌘':'Ctrl';
 
 /* ── utils ────────────────────────────────────────────────────────────────── */

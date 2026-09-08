@@ -308,3 +308,15 @@ both. Paper untouched, as always.
 
 Proof: cocoa reconstruction unchanged (38 lines, $106,815.59), zero console
 errors, screenshots in mockups/minimal_v214/.
+
+## v2.15.0 — MINIMAL, MORE: paper and ink (08 Sep 26)
+
+The user, on v2.14: "can you make it more minimal ?" What remained was still
+ornament: one large navy band, an icon beside every tab and heading, a grey
+desk under white cards, soft corners. Now the topbar is the same paper as the
+page with a hairline under it; tabs and card headings are text only; the desk
+is the card colour itself; corners tighten to 6px (4px on small pills); the
+beta note is a sentence, not a pill; hover everywhere is one hairline changing
+colour. What is left is ink, one accent, and hairlines — in light and dark.
+Paper untouched. Cocoa reconstruction unchanged ($106,815.59), zero console
+errors. Shots in mockups/minimal_v215/.
